@@ -1,13 +1,13 @@
 <p align="center">
   <a href="https://linea-markdown-editor.marcgt.chatgpt.site">
-    <img src="public/og.png" alt="Línea — editor Markdown local y tranquilo" width="100%" />
+    <img src="public/og.jpg" alt="Línea — editor Markdown sin distracciones" width="100%" />
   </a>
 </p>
 
 <h1 align="center">Línea</h1>
 
 <p align="center">
-  Un espacio local y tranquilo para escribir Markdown.<br />
+  Un espacio tranquilo para escribir Markdown.<br />
   <a href="https://linea-markdown-editor.marcgt.chatgpt.site"><strong>Probar Línea ↗</strong></a>
 </p>
 
