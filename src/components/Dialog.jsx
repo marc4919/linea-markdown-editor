@@ -3,13 +3,13 @@ import { CloseIcon, FileIcon, WarningIcon } from './Icons.jsx'
 export function ImportDialog({ files, dirty, onNewTabs, onReplace, onCancel }) {
   if (!files?.length) return null
   const multiple = files.length > 1
-  const label = multiple ? `${files.length} archivos` : `«${files[0].name}»`
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onCancel()}>
       <section className="decision-dialog" role="dialog" aria-modal="true" aria-labelledby="import-title">
         <button className="dialog-close" type="button" aria-label="Cancelar apertura" onClick={onCancel}><CloseIcon /></button>
         <FileIcon />
-        <h2 id="import-title">Abrir {label}</h2>
+        <h2 id="import-title">{multiple ? `Abrir ${files.length} archivos` : 'Abrir archivo'}</h2>
+        {!multiple ? <p className="import-filename" title={files[0].name}>{files[0].name}</p> : null}
         <p>{multiple ? 'Cada archivo se abrirá en su propia pestaña.' : 'Elige cómo quieres incorporar el documento.'}</p>
         <div className="dialog-actions">
           <button className="primary" type="button" autoFocus onClick={onNewTabs}>Nueva pestaña{multiple ? 's' : ''}</button>
@@ -45,7 +45,10 @@ export function RenameDialog({ value, onChange, onConfirm, onCancel }) {
         <h2 id="rename-title">Renombrar documento</h2>
         <label>
           <span>Nombre del archivo</span>
-          <input autoFocus value={value} onChange={(event) => onChange(event.target.value)} />
+          <span className="rename-input-group">
+            <input autoFocus value={value} onChange={(event) => onChange(event.target.value)} />
+            <span className="rename-suffix" aria-hidden="true">.md</span>
+          </span>
         </label>
         <div className="confirm-actions">
           <button type="button" onClick={onCancel}>Cancelar</button>

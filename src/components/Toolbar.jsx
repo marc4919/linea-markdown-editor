@@ -6,6 +6,7 @@ import {
   FolderIcon,
   LiveIcon,
   MoreIcon,
+  OutlineIcon,
   SplitIcon,
 } from './Icons.jsx'
 
@@ -15,7 +16,7 @@ const modes = [
   { id: 'split', label: 'Comparar', icon: SplitIcon },
 ]
 
-export default function Toolbar({ filename, mode, saveState, onModeChange, onOpen, onDownload, onExportHtml, onExportPdf, onCommand, onRename }) {
+export default function Toolbar({ filename, mode, saveState, onModeChange, onOpen, onDownload, onExportHtml, onExportPdf, onCommand, onRename, onOutline }) {
   const runExport = (event, action) => {
     const details = event.currentTarget.closest('details')
     const summary = details?.querySelector('summary')
@@ -54,6 +55,9 @@ export default function Toolbar({ filename, mode, saveState, onModeChange, onOpe
       </div>
 
       <div className="toolbar-actions">
+        <button className="mobile-outline-button" type="button" aria-label="Abrir estructura" title="Estructura" onClick={onOutline}>
+          <OutlineIcon />
+        </button>
         <button className="command-button" type="button" aria-label="Abrir paleta de comandos" title="Comandos (⌘⇧P)" onClick={onCommand}>
           <span className="command-icon command-icon-desktop" aria-hidden="true"><CommandIcon /></span>
           <span className="command-icon command-icon-mobile" aria-hidden="true"><MoreIcon /></span>

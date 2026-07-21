@@ -8,44 +8,44 @@ export function getHeadings(markdown) {
   })
 }
 
-export default function OutlinePane({ markdown, collapsed, onToggle, onNavigate }) {
+export default function OutlinePane({ markdown, collapsed, mobileOpen, onToggle, onMobileClose, onNavigate }) {
   const headings = getHeadings(markdown)
   const hasHeadings = headings.length > 0
-  const effectiveCollapsed = collapsed || !hasHeadings
-  const toggle = () => {
-    if (!hasHeadings) return
-    onToggle()
+  const navigate = (line) => {
+    onNavigate(line)
+    onMobileClose?.()
   }
 
   return (
-    <aside className={`outline-pane${effectiveCollapsed ? ' is-collapsed' : ''}${!hasHeadings ? ' is-empty' : ''}`} aria-label="Estructura del documento">
+    <>
+      <button className={`outline-scrim${mobileOpen ? ' is-visible' : ''}`} type="button" aria-label="Cerrar panel de estructura" tabIndex={mobileOpen ? 0 : -1} onClick={onMobileClose} />
+      <aside className={`outline-pane${collapsed ? ' is-collapsed' : ''}${!hasHeadings ? ' is-empty' : ''}${mobileOpen ? ' is-mobile-open' : ''}`} aria-label="Estructura del documento">
       <div className="outline-header">
         <span>Estructura</span>
         <button
           type="button"
-          aria-label={!hasHeadings ? 'Estructura vacía' : effectiveCollapsed ? 'Mostrar estructura' : 'Ocultar estructura'}
-          aria-expanded={!effectiveCollapsed}
-          disabled={!hasHeadings}
-          title={!hasHeadings ? 'Añade un título para crear la estructura' : undefined}
-          onClick={toggle}
+          aria-label={mobileOpen ? 'Cerrar estructura' : collapsed ? 'Mostrar estructura' : 'Ocultar estructura'}
+          aria-expanded={!collapsed}
+          onClick={onToggle}
         >
           <ChevronDownIcon />
         </button>
       </div>
-      {!effectiveCollapsed ? (
+      {!collapsed || mobileOpen ? (
         <nav className="outline-list" aria-label="Encabezados">
-          {headings.map((heading) => (
+          {hasHeadings ? headings.map((heading) => (
             <button
               key={`${heading.line}-${heading.text}`}
               type="button"
               style={{ '--outline-level': heading.level }}
-              onClick={() => onNavigate(heading.line)}
+              onClick={() => navigate(heading.line)}
             >
               {heading.text}
             </button>
-          ))}
+          )) : <p>Añade títulos con Estilo → H1/H2 o escribe <code># Título</code> en Markdown.</p>}
         </nav>
       ) : null}
-    </aside>
+      </aside>
+    </>
   )
 }

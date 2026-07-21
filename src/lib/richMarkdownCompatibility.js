@@ -26,6 +26,13 @@ export function getInitialFrontmatterRange(markdown) {
 
 export function getRichMarkdownLimitations(markdown) {
   const source = String(markdown ?? '')
+  // TipTap represents intentional empty rich-text paragraphs as a standalone
+  // non-breaking-space entity. It is safe only when it occupies the whole
+  // line; inline entities must remain protected from rich serialization.
+  const sourceWithoutRichSpacers = source
+    .split(/\r?\n/)
+    .map((line) => line.trim() === '&nbsp;' ? '' : line)
+    .join('\n')
   const limitations = []
 
   if (getInitialFrontmatterRange(source)) {
@@ -34,7 +41,7 @@ export function getRichMarkdownLimitations(markdown) {
   if (RAW_HTML.test(source)) limitations.push('HTML incrustado')
   if (REFERENCE_DEFINITION.test(source)) limitations.push('enlaces por referencia')
   if (ORDERED_TASK_LIST.test(source)) limitations.push('listas de tareas numeradas')
-  if (MARKDOWN_ENTITY.test(source)) limitations.push('entidades Markdown')
+  if (MARKDOWN_ENTITY.test(sourceWithoutRichSpacers)) limitations.push('entidades Markdown')
   if (INLINE_FOOTNOTE.test(source)) limitations.push('notas al pie inline')
   if (hasComplexFootnoteDefinition(source)) limitations.push('notas al pie complejas')
   if (MULTI_BACKTICK_CODE.test(source)) limitations.push('código inline con backticks')

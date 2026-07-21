@@ -82,6 +82,12 @@ test('protege entidades Markdown para que no cambie su significado al serializar
   assert.deepEqual(getRichMarkdownLimitations('Texto \\&copy; literal'), [])
 })
 
+test('permite solo los espaciadores enriquecidos que ocupan una línea completa', () => {
+  assert.deepEqual(getRichMarkdownLimitations('Uno\n\n&nbsp;\n&nbsp;\n\nDos'), [])
+  assert.deepEqual(getRichMarkdownLimitations('Uno &nbsp; dos'), ['entidades Markdown'])
+  assert.deepEqual(getRichMarkdownLimitations('&copy;'), ['entidades Markdown'])
+})
+
 test('protege notas inline, notas complejas y código con delimitadores múltiples', () => {
   assert.deepEqual(getRichMarkdownLimitations('Texto ^[nota breve].'), ['notas al pie inline'])
   assert.deepEqual(getRichMarkdownLimitations('[^1]: Primer párrafo\n\n    Segundo párrafo'), ['notas al pie complejas'])

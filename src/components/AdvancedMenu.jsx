@@ -78,32 +78,29 @@ export default function AdvancedMenu({ disabled, disabledActions = [], open, onO
   }, [menuOpen, setOpen])
 
   const run = (id) => {
-    setOpen(false)
     onAction?.(id)
+    setOpen(false)
   }
 
   return (
-    <details
+    <div
       ref={detailsRef}
       className={`advanced-menu${disabled ? ' is-disabled' : ''}`}
-      open={menuOpen}
-      onToggle={(event) => {
-        const nextOpen = event.currentTarget.open
-        if (nextOpen !== menuOpen) setOpen(nextOpen)
-      }}
     >
-      <summary
+      <button
         ref={summaryRef}
+        className="advanced-menu-trigger"
+        type="button"
         aria-label="Más opciones de Markdown"
         aria-controls={popoverId}
         aria-expanded={menuOpen}
         aria-disabled={disabled || undefined}
-        onClick={(event) => { if (disabled) event.preventDefault() }}
+        onClick={() => { if (!disabled) setOpen(!menuOpen) }}
       >
         <MoreIcon />
         <span>Más</span>
-      </summary>
-      <div className="advanced-menu-popover" id={popoverId}>
+      </button>
+      {menuOpen ? <div className="advanced-menu-popover" id={popoverId}>
         <header>
           <strong>Más opciones</strong>
           <small>Markdown avanzado sin llenar la barra</small>
@@ -119,7 +116,7 @@ export default function AdvancedMenu({ disabled, disabledActions = [], open, onO
             ))}
           </section>
         ))}
-      </div>
-    </details>
+      </div> : null}
+    </div>
   )
 }

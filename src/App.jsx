@@ -38,6 +38,8 @@ import {
   insertConfiguredTable,
 } from './lib/advancedBuilders.js'
 import { exportFilenameFor, renderStandaloneExport } from './lib/documentExport.js'
+import { getDocumentStats } from './lib/documentStats.js'
+import { markdownFilename, stripMarkdownExtension } from './lib/filename.js'
 import { richMarkdownNotice } from './lib/richMarkdownCompatibility.js'
 import {
   activateTab,
@@ -104,11 +106,6 @@ function downloadBlob(content, type, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 500)
 }
 
-function markdownFilename(filename) {
-  const trimmed = filename.trim() || 'documento.md'
-  return /\.md$/i.test(trimmed) ? trimmed : `${trimmed}.md`
-}
-
 async function readMarkdownFiles(fileList) {
   const files = [...fileList]
   if (!files.length) return { files: [], rejected: [] }
@@ -150,7 +147,7 @@ export default function App() {
   const [selection, setSelection] = useState(EMPTY_SELECTION)
   const [guideOpen, setGuideOpen] = useState(false)
   const [outlineCollapsed, setOutlineCollapsed] = useState(false)
-  const [outlineSuppressedTabs, setOutlineSuppressedTabs] = useState(() => new Set())
+  const [mobileOutlineOpen, setMobileOutlineOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
   const [dropActive, setDropActive] = useState(false)
@@ -175,32 +172,16 @@ export default function App() {
 
   const activeTab = getActiveTab(workspace)
   const activeId = activeTab.id
-  const hasOutlineHeadings = useMemo(() => /^#{1,6}\s+.+/m.test(activeTab.markdown), [activeTab.markdown])
-  const effectiveOutlineCollapsed = outlineCollapsed || !hasOutlineHeadings || outlineSuppressedTabs.has(activeId)
-
-  useEffect(() => {
-    if (hasOutlineHeadings || outlineSuppressedTabs.has(activeId)) return
-    setOutlineSuppressedTabs((current) => {
-      if (current.has(activeId)) return current
-      const next = new Set(current)
-      next.add(activeId)
-      return next
-    })
-  }, [activeId, hasOutlineHeadings, outlineSuppressedTabs])
 
   const toggleOutline = useCallback(() => {
-    if (!hasOutlineHeadings) return
-    if (outlineSuppressedTabs.has(activeId)) {
-      setOutlineSuppressedTabs((current) => {
-        const next = new Set(current)
-        next.delete(activeId)
-        return next
-      })
-      setOutlineCollapsed(false)
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      setMobileOutlineOpen((current) => !current)
       return
     }
     setOutlineCollapsed((current) => !current)
-  }, [activeId, hasOutlineHeadings, outlineSuppressedTabs])
+  }, [])
+
+  useEffect(() => setMobileOutlineOpen(false), [activeId])
 
   const changeMode = useCallback((nextMode) => {
     if (nextMode === 'rich') {
@@ -502,7 +483,7 @@ export default function App() {
 
   const openRename = useCallback(() => {
     renameTabIdRef.current = activeId
-    setRenameValue(activeTab.filename)
+    setRenameValue(stripMarkdownExtension(activeTab.filename))
     setRenameOpen(true)
   }, [activeId, activeTab.filename])
 
@@ -880,6 +861,7 @@ export default function App() {
     if (mode !== 'source' && mode !== 'split') setMode('source')
     const nextSelection = { start, end: start, direction: 'none' }
     restoreEditorSelection(nextSelection)
+    setMobileOutlineOpen(false)
     window.setTimeout(() => textareaRef.current?.scrollToLine?.(targetLine), 0)
   }, [activeTab.markdown, mode, restoreEditorSelection])
 
@@ -919,6 +901,7 @@ export default function App() {
         setBuilder(null)
         setGuideOpen(false)
         setDropActive(false)
+        setMobileOutlineOpen(false)
         return
       }
       const dialogOpen = Boolean(confirmation || pendingFiles.length || renameOpen || linkEditor.open || footnoteEditor.open || guideOpen || commandOpen || builder)
@@ -972,10 +955,7 @@ export default function App() {
     }, 0)
   }, [mode])
 
-  const wordCount = useMemo(() => {
-    const plainText = activeTab.markdown.replace(/[#>*_`\-[\]()~]/g, ' ').trim()
-    return plainText ? plainText.split(/\s+/).length : 0
-  }, [activeTab.markdown])
+  const documentStats = useMemo(() => getDocumentStats(activeTab.markdown), [activeTab.markdown])
 
   const commands = [
     { id: 'new', label: 'Nuevo documento', shortcut: '⌘T', keywords: 'crear archivo', action: createDocument },
@@ -993,7 +973,7 @@ export default function App() {
     { id: 'footnote', label: 'Insertar nota al pie', keywords: 'referencia avanzado', action: () => applyAdvancedAction('footnote') },
     { id: 'mermaid', label: 'Insertar diagrama Mermaid', keywords: 'gráfico flujo avanzado', action: () => applyAdvancedAction('mermaid') },
     { id: 'codeblock', label: 'Insertar bloque de código', keywords: 'fence avanzado', action: () => applyAdvancedAction('codeblock') },
-    { id: 'outline', label: !hasOutlineHeadings ? 'Estructura vacía' : effectiveOutlineCollapsed ? 'Mostrar estructura' : 'Ocultar estructura', shortcut: '⌘⇧O', disabled: !hasOutlineHeadings, action: toggleOutline },
+    { id: 'outline', label: outlineCollapsed ? 'Mostrar estructura' : 'Ocultar estructura', shortcut: '⌘⇧O', action: toggleOutline },
     { id: 'rich', label: 'Cambiar a edición enriquecida', shortcut: '⌘⇧L', keywords: 'wysiwyg documento word', action: () => changeMode('rich') },
     { id: 'source', label: 'Cambiar a Markdown', shortcut: '⌘⇧E', keywords: 'fuente código crudo', action: () => changeMode('source') },
     { id: 'split', label: 'Comparar Markdown y resultado', shortcut: '⌘⇧D', action: () => changeMode('split') },
@@ -1043,6 +1023,7 @@ export default function App() {
         onExportPdf={exportPdf}
         onCommand={() => setCommandOpen(true)}
         onRename={openRename}
+        onOutline={toggleOutline}
       />
       <DocumentTabs documents={workspace.tabs} activeId={activeId} onActivate={activateDocument} onClose={requestClose} onNew={createDocument} onRename={openRename} />
       <FormattingToolbar
@@ -1082,7 +1063,6 @@ export default function App() {
         documentId={activeId}
         markdown={activeTab.markdown}
         mode={mode}
-        onModeChange={changeMode}
         onMarkdownChange={updateMarkdown}
         onCursorChange={updateCursor}
         onSelectionChange={updateSelection}
@@ -1093,11 +1073,13 @@ export default function App() {
         richEditorRef={richEditorRef}
         onRichFormatStateChange={setRichFormatState}
         onEditMermaid={editRichMermaid}
-        outlineCollapsed={effectiveOutlineCollapsed}
+        outlineCollapsed={outlineCollapsed}
+        mobileOutlineOpen={mobileOutlineOpen}
         onToggleOutline={toggleOutline}
+        onCloseMobileOutline={() => setMobileOutlineOpen(false)}
         onNavigate={navigateToLine}
       />
-      <StatusBar words={wordCount} cursor={cursor} mode={mode} />
+      <StatusBar words={documentStats.words} characters={documentStats.characters} cursor={cursor} mode={mode} onModeChange={changeMode} />
       <QuickGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
       <DropOverlay visible={dropActive} />
       {focusMode ? (

@@ -1,13 +1,5 @@
-export const STARTER_MARKDOWN = `# Un espacio tranquilo para tus ideas
+export const STARTER_MARKDOWN = `# Bienvenido a Línea
 
-Línea es un editor de Markdown simple y elegante, diseñado para ayudarte a escribir con claridad y enfocarte en lo que importa.
+Escribe aquí como en un documento y usa la barra superior para dar formato.
 
-## Lo esencial
-
-- Escritura sin distracciones
-- Vista previa en tiempo real
-- Exporta tus archivos fácilmente
-
-> Las buenas ideas merecen un espacio tranquilo para crecer.
-
-Empieza ahora con \`Línea\` y disfruta el proceso.`
+Cambia entre **Enriquecido**, **Markdown** y **Comparar/Resultado** cuando quieras. Crea otra nota con **+**.`

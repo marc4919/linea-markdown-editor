@@ -126,3 +126,29 @@ export function renderMarkdown(markdown, options = {}) {
   const html = markdownRenderer.renderer.render(tokens, markdownRenderer.options, environment)
   return html.endsWith('\n') ? html.slice(0, -1) : html
 }
+
+function inlineVisibleText(children = []) {
+  return children.map((token) => {
+    if (token.type === 'text' || token.type === 'code_inline') return token.content
+    if (token.type === 'image') return token.content
+    if (token.type === 'softbreak' || token.type === 'hardbreak') return ' '
+    return ''
+  }).join('')
+}
+
+export function extractMarkdownText(markdown) {
+  const tokens = markdownRenderer.parse(String(markdown ?? ''), {})
+  const blocks = []
+
+  for (const token of tokens) {
+    if (token.type === 'inline') {
+      const text = inlineVisibleText(token.children)
+      if (text.trim()) blocks.push(text)
+      continue
+    }
+    if (token.type === 'code_block') blocks.push(token.content)
+    if (token.type === 'fence' && token.info.trim().toLowerCase() !== 'mermaid') blocks.push(token.content)
+  }
+
+  return blocks.join('\n').replace(/\u00a0/g, ' ')
+}

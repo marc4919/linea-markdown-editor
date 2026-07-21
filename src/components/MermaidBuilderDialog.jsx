@@ -553,7 +553,8 @@ export default function MermaidBuilderDialog({
           <button type="button" aria-label="Cerrar el creador de diagramas" onClick={onCancel}><CloseIcon /></button>
         </header>
 
-        <div className="mermaid-edit-mode" role="group" aria-label="Forma de crear el diagrama">
+        <div className="mermaid-dialog-scroll">
+          <div className="mermaid-edit-mode" role="group" aria-label="Forma de crear el diagrama">
           <button type="button" className={editingMode === 'assistant' ? 'is-active' : ''} aria-pressed={editingMode === 'assistant'} onClick={() => setEditingMode('assistant')}>Asistente</button>
           <button
             type="button"
@@ -565,9 +566,9 @@ export default function MermaidBuilderDialog({
             }}
           >Código Mermaid</button>
           <button className="mermaid-reset-example" type="button" onClick={resetExample}>Restablecer ejemplo</button>
-        </div>
+          </div>
 
-        {editingMode === 'assistant' ? <fieldset className="mermaid-template-picker">
+          {editingMode === 'assistant' ? <fieldset className="mermaid-template-picker">
           <legend><SectionLegend number="1">Elige el tipo de diagrama</SectionLegend></legend>
           <div className="mermaid-template-options">
             {TEMPLATES.map((template, index) => (
@@ -580,15 +581,16 @@ export default function MermaidBuilderDialog({
                   checked={currentSpec.type === template.type}
                   onChange={() => onChange(getDefaultMermaidSpec(template.type))}
                 />
+                <span className="mermaid-template-radio" aria-hidden="true" />
                 <strong>{template.label}</strong>
                 <small>{template.description}</small>
               </label>
             ))}
           </div>
-        </fieldset> : null}
+          </fieldset> : null}
 
-        <div className="mermaid-builder-content">
-          <div className="mermaid-builder-fields">
+          <div className="mermaid-builder-content">
+            <div className="mermaid-builder-fields">
             {editingMode === 'assistant' ? (
               <Fields spec={currentSpec} onChange={onChange} />
             ) : (
@@ -604,8 +606,8 @@ export default function MermaidBuilderDialog({
                 <small id={`${titleId}-source-help`}>Puedes editar cualquier sintaxis Mermaid compatible. La vista se actualiza a la derecha.</small>
               </label>
             )}
-          </div>
-          <aside className="mermaid-builder-output" aria-labelledby={`${titleId}-preview`}>
+            </div>
+            <aside className="mermaid-builder-output" aria-labelledby={`${titleId}-preview`}>
             <h3 id={`${titleId}-preview`}><SectionLegend number={editingMode === 'assistant' ? '3' : '2'}>Revisa la vista previa</SectionLegend></h3>
             {activeError
               ? <div className="builder-validation-error" role="alert">{activeError}</div>
@@ -622,7 +624,8 @@ export default function MermaidBuilderDialog({
               <summary>{editingMode === 'assistant' ? 'Ver código generado' : 'Ver código actual'}</summary>
               <pre><code>{activeSource}</code></pre>
             </details>
-          </aside>
+            </aside>
+          </div>
         </div>
 
         <footer className="builder-dialog-actions">

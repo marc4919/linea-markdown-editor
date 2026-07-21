@@ -8,7 +8,6 @@ export default function Workspace({
   documentId,
   markdown,
   mode,
-  onModeChange,
   onMarkdownChange,
   onCursorChange,
   onSelectionChange,
@@ -20,7 +19,9 @@ export default function Workspace({
   onRichFormatStateChange,
   onEditMermaid,
   outlineCollapsed,
+  mobileOutlineOpen,
   onToggleOutline,
+  onCloseMobileOutline,
   onNavigate,
 }) {
   const workspaceRef = useRef(null)
@@ -70,18 +71,20 @@ export default function Workspace({
 
   return (
     <div className="workspace-frame">
-      <OutlinePane markdown={markdown} collapsed={outlineCollapsed} onToggle={onToggleOutline} onNavigate={onNavigate} />
+      <OutlinePane
+        markdown={markdown}
+        collapsed={outlineCollapsed}
+        mobileOpen={mobileOutlineOpen}
+        onToggle={onToggleOutline}
+        onMobileClose={onCloseMobileOutline}
+        onNavigate={onNavigate}
+      />
       <main
         id="workspace"
         ref={workspaceRef}
         className={`workspace mode-${mode}`}
         style={{ '--editor-width': `${split}%` }}
       >
-        <div className="mobile-view-switch" role="group" aria-label="Vista del documento">
-          <button type="button" className={mode === 'rich' ? 'is-active' : ''} aria-pressed={mode === 'rich'} onClick={() => onModeChange('rich')}>Enriquecido</button>
-          <button type="button" className={mode === 'source' ? 'is-active' : ''} aria-pressed={mode === 'source'} onClick={() => onModeChange('source')}>Markdown</button>
-          <button type="button" className={mode === 'split' ? 'is-active' : ''} aria-pressed={mode === 'split'} onClick={() => onModeChange('split')}>Resultado</button>
-        </div>
         {mode === 'rich' ? (
           <RichEditorPane
             key={documentId}
