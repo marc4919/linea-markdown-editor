@@ -17,19 +17,19 @@
   <a href="#ejecutar-en-local">Código abierto</a>
 </p>
 
-## En movimiento
-
-<p align="center">
-  <a href="https://github.com/marc4919/linea-markdown-editor/raw/refs/heads/main/public/linea-demo.mp4">
-    <img src="public/linea-demo.gif" alt="Demostración animada de Línea: escritura, tablas y vista comparada" width="100%" />
-  </a>
-</p>
-
-> La demostración se reproduce automáticamente y en bucle dentro de GitHub. Haz clic para abrir el vídeo completo en alta resolución.
-
-## Un editor que deja espacio a las ideas
-
-Línea combina una escritura serena con herramientas potentes: Markdown en vivo, edición enriquecida, vista previa, exportación y una organización clara de tus documentos. Todo sucede en el navegador, sin cuentas ni servidores.
+<table>
+  <tr>
+    <td width="58%">
+      <a href="https://github.com/marc4919/linea-markdown-editor/raw/refs/heads/main/public/linea-demo.mp4">
+        <img src="public/linea-demo.gif" alt="Demostración animada de Línea: escritura, tablas y vista comparada" width="100%" />
+      </a>
+    </td>
+    <td width="42%" valign="middle">
+      <strong>Un editor que deja espacio a las ideas.</strong><br /><br />
+      Línea combina una escritura serena con herramientas potentes: Markdown en vivo, edición enriquecida, vista previa, exportación y una organización clara de tus documentos. Todo sucede en el navegador, sin cuentas ni servidores.
+    </td>
+  </tr>
+</table>
 
 | Escribe | Organiza | Comparte |
 | :-- | :-- | :-- |
