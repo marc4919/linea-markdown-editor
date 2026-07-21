@@ -1,8 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  createFootnoteMarkdown,
   insertCodeBlock,
   insertFootnote,
+  insertFootnoteWithContent,
   insertHorizontalRule,
   insertImage,
   insertMermaid,
@@ -40,6 +42,38 @@ test('añade la referencia tras una selección sin borrar el texto elegido', () 
 
   assert.match(result.text, /^Una frase\[\^1\] importante\./)
   assert.match(result.text, /\[\^1\]: Nota al pie$/)
+})
+
+test('crea una nota explícita reutilizable sin texto predeterminado', () => {
+  const footnote = createFootnoteMarkdown('Texto[^1]', '  Fuente consultada  ')
+
+  assert.deepEqual(footnote, {
+    identifier: 2,
+    reference: '[^2]',
+    definition: '[^2]: Fuente consultada',
+    markdown: '[^2]\n\n[^2]: Fuente consultada',
+  })
+  assert.equal(createFootnoteMarkdown('', '   '), null)
+})
+
+test('inserta una nota explícita tras la selección y devuelve el cursor junto a la referencia', () => {
+  const text = 'Una frase importante.'
+  const edit = insertFootnoteWithContent(text, 4, 9, 'Contexto adicional')
+
+  assert.equal(edit.text, 'Una frase[^1] importante.\n\n[^1]: Contexto adicional')
+  assert.equal(edit.selectionStart, 13)
+  assert.equal(edit.selectionEnd, 13)
+  assert.equal(edit.text.includes('Nota al pie'), false)
+})
+
+test('una nota explícita vacía no modifica el documento ni su selección', () => {
+  const edit = insertFootnoteWithContent('Texto intacto', 2, 7, '   ')
+
+  assert.deepEqual(edit, {
+    text: 'Texto intacto',
+    selectionStart: 2,
+    selectionEnd: 7,
+  })
 })
 
 test('inserta separadores, Mermaid e imágenes seguras como Markdown', () => {

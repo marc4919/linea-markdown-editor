@@ -6,8 +6,6 @@ import {
   FolderIcon,
   LiveIcon,
   MoreIcon,
-  PlusIcon,
-  PreviewIcon,
   SplitIcon,
 } from './Icons.jsx'
 
@@ -15,10 +13,17 @@ const modes = [
   { id: 'rich', label: 'Edición enriquecida', icon: LiveIcon },
   { id: 'source', label: 'Markdown', icon: CodeIcon },
   { id: 'split', label: 'Comparar', icon: SplitIcon },
-  { id: 'preview', label: 'Lectura', icon: PreviewIcon },
 ]
 
-export default function Toolbar({ filename, mode, saveState, onModeChange, onNew, onOpen, onDownload, onExportHtml, onCommand, onRename }) {
+export default function Toolbar({ filename, mode, saveState, onModeChange, onOpen, onDownload, onExportHtml, onExportPdf, onCommand, onRename }) {
+  const runExport = (event, action) => {
+    const details = event.currentTarget.closest('details')
+    const summary = details?.querySelector('summary')
+    details?.removeAttribute('open')
+    summary?.focus()
+    action?.()
+  }
+
   return (
     <header className="toolbar">
       <a className="brand" href="#workspace" aria-label="Línea, ir al editor">
@@ -27,13 +32,13 @@ export default function Toolbar({ filename, mode, saveState, onModeChange, onNew
       </a>
 
       <nav className="primary-actions" aria-label="Acciones de documento">
-        <button type="button" aria-label="Nuevo documento" onClick={onNew}><PlusIcon /><span>Nuevo</span></button>
         <button type="button" aria-label="Abrir archivos" onClick={onOpen}><FolderIcon /><span>Abrir</span></button>
         <details className="export-menu">
           <summary aria-label="Exportar documento"><DownloadIcon /><span>Exportar</span></summary>
           <div>
-            <button type="button" onClick={onDownload}>Markdown (.md)</button>
-            <button type="button" onClick={onExportHtml}>Página web (.html)</button>
+            <button type="button" onClick={(event) => runExport(event, onDownload)}>Markdown (.md)</button>
+            <button type="button" onClick={(event) => runExport(event, onExportHtml)}>Página web (.html)</button>
+            <button type="button" onClick={(event) => runExport(event, onExportPdf)}>PDF…</button>
           </div>
         </details>
       </nav>
@@ -45,7 +50,7 @@ export default function Toolbar({ filename, mode, saveState, onModeChange, onNew
 
       <div className={`save-state is-${saveState.kind}`} role="status" aria-live="polite" aria-label={saveState.label} title={saveState.label}>
         <span className="save-check" aria-hidden="true">{saveState.kind === 'error' ? '!' : saveState.kind === 'saving' ? '·' : '✓'}</span>
-        <span>{saveState.label}</span>
+        {saveState.kind === 'error' ? <span>{saveState.label}</span> : null}
       </div>
 
       <div className="toolbar-actions">

@@ -23,8 +23,9 @@ import {
   toggleQuote,
 } from './lib/formatting.js'
 import {
+  createFootnoteMarkdown,
   insertCodeBlock,
-  insertFootnote,
+  insertFootnoteWithContent,
   insertHorizontalRule,
   insertImage,
   insertTask,
@@ -36,7 +37,7 @@ import {
   insertConfiguredMermaid,
   insertConfiguredTable,
 } from './lib/advancedBuilders.js'
-import { renderMarkdown } from './lib/markdown.js'
+import { exportFilenameFor, renderStandaloneExport } from './lib/documentExport.js'
 import { richMarkdownNotice } from './lib/richMarkdownCompatibility.js'
 import {
   activateTab,
@@ -108,46 +109,6 @@ function markdownFilename(filename) {
   return /\.md$/i.test(trimmed) ? trimmed : `${trimmed}.md`
 }
 
-function escapeDocumentTitle(value) {
-  return value.replace(/[&<>"']/g, (character) => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  })[character])
-}
-
-let exportDiagramSequence = 0
-
-async function renderExportBody(markdown) {
-  const container = window.document.createElement('div')
-  container.innerHTML = renderMarkdown(markdown)
-  const diagrams = [...container.querySelectorAll('pre > code.language-mermaid')]
-  if (!diagrams.length) return container.innerHTML
-
-  try {
-    const { default: mermaid } = await import('mermaid')
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' })
-    for (const code of diagrams) {
-      try {
-        exportDiagramSequence += 1
-        const { svg } = await mermaid.render(`linea-export-diagram-${exportDiagramSequence}`, code.textContent ?? '')
-        const diagram = window.document.createElement('div')
-        diagram.className = 'mermaid-export'
-        diagram.innerHTML = svg
-        code.parentElement?.replaceWith(diagram)
-      } catch {
-        // Preserve the source fence if one diagram is invalid.
-      }
-    }
-  } catch {
-    // Export remains usable as Markdown code when Mermaid cannot be loaded.
-  }
-
-  return container.innerHTML
-}
-
 async function readMarkdownFiles(fileList) {
   const files = [...fileList]
   if (!files.length) return { files: [], rejected: [] }
@@ -189,6 +150,7 @@ export default function App() {
   const [selection, setSelection] = useState(EMPTY_SELECTION)
   const [guideOpen, setGuideOpen] = useState(false)
   const [outlineCollapsed, setOutlineCollapsed] = useState(false)
+  const [outlineSuppressedTabs, setOutlineSuppressedTabs] = useState(() => new Set())
   const [commandOpen, setCommandOpen] = useState(false)
   const [focusMode, setFocusMode] = useState(false)
   const [dropActive, setDropActive] = useState(false)
@@ -197,6 +159,7 @@ export default function App() {
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [linkEditor, setLinkEditor] = useState({ open: false, kind: 'link', initialLabel: '', initialUrl: 'https://', canRemove: false })
+  const [footnoteEditor, setFootnoteEditor] = useState({ open: false })
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [builder, setBuilder] = useState(null)
   const [richFormatState, setRichFormatState] = useState({})
@@ -212,6 +175,32 @@ export default function App() {
 
   const activeTab = getActiveTab(workspace)
   const activeId = activeTab.id
+  const hasOutlineHeadings = useMemo(() => /^#{1,6}\s+.+/m.test(activeTab.markdown), [activeTab.markdown])
+  const effectiveOutlineCollapsed = outlineCollapsed || !hasOutlineHeadings || outlineSuppressedTabs.has(activeId)
+
+  useEffect(() => {
+    if (hasOutlineHeadings || outlineSuppressedTabs.has(activeId)) return
+    setOutlineSuppressedTabs((current) => {
+      if (current.has(activeId)) return current
+      const next = new Set(current)
+      next.add(activeId)
+      return next
+    })
+  }, [activeId, hasOutlineHeadings, outlineSuppressedTabs])
+
+  const toggleOutline = useCallback(() => {
+    if (!hasOutlineHeadings) return
+    if (outlineSuppressedTabs.has(activeId)) {
+      setOutlineSuppressedTabs((current) => {
+        const next = new Set(current)
+        next.delete(activeId)
+        return next
+      })
+      setOutlineCollapsed(false)
+      return
+    }
+    setOutlineCollapsed((current) => !current)
+  }, [activeId, hasOutlineHeadings, outlineSuppressedTabs])
 
   const changeMode = useCallback((nextMode) => {
     if (nextMode === 'rich') {
@@ -221,6 +210,7 @@ export default function App() {
         setNotice(protectionNotice)
         setAdvancedOpen(false)
         setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+        setFootnoteEditor({ open: false })
         setBuilder(null)
         return
       }
@@ -228,6 +218,7 @@ export default function App() {
     setMode(nextMode)
     setAdvancedOpen(false)
     setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+    setFootnoteEditor({ open: false })
     setBuilder(null)
   }, [activeTab.markdown])
 
@@ -258,6 +249,7 @@ export default function App() {
 
   useEffect(() => {
     setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+    setFootnoteEditor({ open: false })
     setAdvancedOpen(false)
     setBuilder(null)
     if (renameTabIdRef.current && renameTabIdRef.current !== activeId) setRenameOpen(false)
@@ -324,7 +316,6 @@ export default function App() {
     selectionsRef.current.set(activeId, selection)
     setWorkspace((current) => createTab(current))
     setSelection(EMPTY_SELECTION)
-    setMode((current) => current === 'preview' ? 'rich' : current)
     window.setTimeout(() => (richEditorRef.current || textareaRef.current)?.focus?.(), 0)
   }, [activeId, selection])
 
@@ -388,7 +379,6 @@ export default function App() {
     setWorkspace(next)
     setPendingFiles([])
     setSelection(EMPTY_SELECTION)
-    setMode((current) => current === 'preview' ? 'source' : current)
   }, [activeId, pendingFiles, selection, workspace])
 
   const performReplace = useCallback((tabId = activeId) => {
@@ -442,11 +432,15 @@ export default function App() {
     const tabId = activeId
     const markdownSnapshot = activeTab.markdown
     const filenameSnapshot = activeTab.filename
-    const filename = markdownFilename(activeTab.filename).replace(/\.md$/i, '.html')
-    const title = escapeDocumentTitle(activeTab.filename.replace(/\.md$/i, '') || 'Documento')
+    const filename = exportFilenameFor(activeTab.filename, 'html')
+    const warnings = []
     setNotice('Preparando la página web…')
-    const body = await renderExportBody(markdownSnapshot)
-    const html = `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style>body{max-width:760px;margin:64px auto;padding:0 24px;color:#211f1c;font:19px/1.6 Georgia,serif}h1{font-size:48px;line-height:1.05}h2{font-size:32px}pre{overflow:auto;padding:18px;background:#292723;color:#fff}code{font-family:monospace}blockquote{border-left:3px solid #c92e28;padding-left:18px;color:#666}img{max-width:100%;height:auto}table{width:100%;margin:24px 0;border-collapse:collapse;font:16px/1.45 system-ui,sans-serif}th,td{padding:10px 12px;border:1px solid #d9d6cf;text-align:left}th{background:#f7f6f2}.task-list-item{list-style:none}.task-list-item input{accent-color:#c92e28}.footnotes{margin-top:44px;border-top:1px solid #d9d6cf;font-size:15px}.mermaid-export{display:grid;place-items:center;max-width:100%;overflow:auto;margin:28px 0}.mermaid-export svg{max-width:100%;height:auto}hr{border:0;border-top:1px solid #d9d6cf}</style></head><body>${body}</body></html>`
+    const html = await renderStandaloneExport({
+      markdown: markdownSnapshot,
+      filename: filenameSnapshot,
+      variant: 'screen',
+      onWarning: (warning) => warnings.push(warning),
+    })
     downloadBlob(html, 'text/html;charset=utf-8', filename)
     const latestTab = workspaceStateRef.current.tabs.find((tab) => tab.id === tabId)
     const snapshotIsCurrent = latestTab?.markdown === markdownSnapshot && latestTab?.filename === filenameSnapshot
@@ -456,10 +450,55 @@ export default function App() {
         ? markTabExported(current, tabId)
         : current
     })
+    const warningSuffix = warnings.length
+      ? ` ${warnings.length === 1 ? 'Un diagrama se conservó' : `${warnings.length} diagramas se conservaron`} como código.`
+      : ''
     setNotice(snapshotIsCurrent
-      ? `Exportado como ${filename}`
-      : `Se exportó una instantánea como ${filename}; los cambios posteriores siguen pendientes.`)
+      ? `Exportado como ${filename}.${warningSuffix}`
+      : `Se exportó una instantánea como ${filename}; los cambios posteriores siguen pendientes.${warningSuffix}`)
   }, [activeId, activeTab.filename, activeTab.markdown])
+
+  const exportPdf = useCallback(() => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      setNotice('El navegador bloqueó el PDF. Permite ventanas emergentes o abre Línea en el navegador del sistema.')
+      return
+    }
+
+    const markdownSnapshot = activeTab.markdown
+    const filenameSnapshot = activeTab.filename
+    printWindow.opener = null
+    printWindow.document.open()
+    printWindow.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Preparando PDF…</title></head><body>Preparando el documento para PDF…</body></html>')
+    printWindow.document.close()
+    setNotice('Preparando el PDF…')
+
+    const handleReady = (event) => {
+      if (event.detail?.partial) {
+        setNotice('El PDF está abierto; revisa los recursos y usa «Imprimir / Guardar PDF».')
+        return
+      }
+      setNotice('PDF listo. Elige «Guardar como PDF» en el diálogo del sistema.')
+      printWindow.focus()
+      printWindow.print()
+    }
+    renderStandaloneExport({
+      markdown: markdownSnapshot,
+      filename: filenameSnapshot,
+      variant: 'print',
+    }).then((html) => {
+      if (printWindow.closed) return
+      printWindow.document.open()
+      printWindow.addEventListener('linea-export-ready', handleReady, { once: true })
+      printWindow.document.write(html)
+      printWindow.document.close()
+    }).catch(() => {
+      if (!printWindow.closed) {
+        printWindow.document.body.textContent = 'No se ha podido preparar el PDF. Cierra esta ventana y vuelve a intentarlo.'
+      }
+      setNotice('No se ha podido preparar el PDF.')
+    })
+  }, [activeTab.filename, activeTab.markdown])
 
   const openRename = useCallback(() => {
     renameTabIdRef.current = activeId
@@ -483,6 +522,7 @@ export default function App() {
 
   const openLinkEditor = useCallback((kind = 'link') => {
     setAdvancedOpen(false)
+    setFootnoteEditor({ open: false })
 
     const openForRichEditor = () => {
       const currentState = richEditorRef.current?.getLinkState?.() || { label: '', url: '', active: false }
@@ -498,17 +538,6 @@ export default function App() {
 
     if (mode === 'rich') {
       openForRichEditor()
-      return
-    }
-    if (mode === 'preview') {
-      const protectionNotice = richMarkdownNotice(activeTab.markdown)
-      if (protectionNotice) {
-        setMode('source')
-        setNotice(protectionNotice)
-        return
-      }
-      setMode('rich')
-      window.setTimeout(openForRichEditor, 0)
       return
     }
 
@@ -583,17 +612,6 @@ export default function App() {
       richEditorRef.current?.format?.(format)
       return
     }
-    if (mode === 'preview') {
-      const protectionNotice = richMarkdownNotice(activeTab.markdown)
-      if (protectionNotice) {
-        setMode('source')
-        setNotice(protectionNotice)
-        return
-      }
-      setMode('rich')
-      window.setTimeout(() => richEditorRef.current?.format?.(format), 0)
-      return
-    }
     const functions = {
       bold: toggleBold,
       italic: toggleItalic,
@@ -611,17 +629,6 @@ export default function App() {
       richEditorRef.current?.setHeading?.(level)
       return
     }
-    if (mode === 'preview') {
-      const protectionNotice = richMarkdownNotice(activeTab.markdown)
-      if (protectionNotice) {
-        setMode('source')
-        setNotice(protectionNotice)
-        return
-      }
-      setMode('rich')
-      window.setTimeout(() => richEditorRef.current?.setHeading?.(level), 0)
-      return
-    }
     applyResult(setHeading(activeTab.markdown, selection.start, selection.end, level))
   }, [activeTab.markdown, applyResult, mode, selection.end, selection.start])
 
@@ -631,6 +638,17 @@ export default function App() {
       openLinkEditor('image')
       return
     }
+    if (action === 'footnote') {
+      setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+      setFootnoteEditor({
+        open: true,
+        tabId: activeId,
+        editorKind: mode === 'rich' ? 'rich' : 'source',
+        markdownSnapshot: activeTab.markdown,
+        selection: { ...selection },
+      })
+      return
+    }
     if (mode === 'rich') {
       if (action === 'table') {
         setBuilder({ kind: 'table', spec: { columns: 3, bodyRows: 2, headers: ['Columna 1', 'Columna 2', 'Columna 3'] }, tabId: activeId, editorKind: 'rich' })
@@ -638,12 +656,6 @@ export default function App() {
       }
       if (action === 'mermaid') {
         setBuilder({ kind: 'mermaid', spec: getDefaultMermaidSpec('flowchart'), source: '', tabId: activeId, editorKind: 'rich', position: null })
-        return
-      }
-      if (action === 'footnote') {
-        const identifiers = [...activeTab.markdown.matchAll(/\[\^(\d+)\]/g)].map((match) => Number(match[1]))
-        const identifier = Math.max(0, ...identifiers) + 1
-        richEditorRef.current?.insertMarkdown?.(`[^${identifier}]\n\n[^${identifier}]: Nota al pie`)
         return
       }
       richEditorRef.current?.format?.(action)
@@ -679,13 +691,35 @@ export default function App() {
       task: insertTask,
       codeblock: insertCodeBlock,
       rule: insertHorizontalRule,
-      footnote: insertFootnote,
     }
     const transform = transforms[action]
     if (!transform) return
-    if (mode === 'preview') setMode('source')
     applyResult(transform(activeTab.markdown, selection.start, selection.end))
   }, [activeId, activeTab.markdown, applyResult, mode, openLinkEditor, selection])
+
+  const closeFootnoteEditor = useCallback(() => {
+    setFootnoteEditor({ open: false })
+  }, [])
+
+  const submitFootnoteEditor = useCallback((content) => {
+    const target = footnoteEditor
+    if (!target.open || target.tabId !== activeId || target.markdownSnapshot !== activeTab.markdown) {
+      setFootnoteEditor({ open: false })
+      setNotice('El documento cambió. Vuelve a abrir la herramienta de nota al pie.')
+      return
+    }
+
+    if (target.editorKind === 'rich') {
+      const footnote = createFootnoteMarkdown(activeTab.markdown, content)
+      if (footnote) richEditorRef.current?.insertFootnote?.({ id: footnote.identifier, text: content })
+      setFootnoteEditor({ open: false })
+      return
+    }
+
+    const { start, end } = target.selection
+    setFootnoteEditor({ open: false })
+    applyResult(insertFootnoteWithContent(activeTab.markdown, start, end, content))
+  }, [activeId, activeTab.markdown, applyResult, footnoteEditor])
 
   const updateBuilderSpec = useCallback((spec) => {
     setBuilder((current) => current ? { ...current, spec } : current)
@@ -880,13 +914,14 @@ export default function App() {
         setPendingFiles([])
         setRenameOpen(false)
         setLinkEditor((current) => ({ ...current, open: false }))
+        setFootnoteEditor({ open: false })
         setAdvancedOpen(false)
         setBuilder(null)
         setGuideOpen(false)
         setDropActive(false)
         return
       }
-      const dialogOpen = Boolean(confirmation || pendingFiles.length || renameOpen || linkEditor.open || guideOpen || commandOpen || builder)
+      const dialogOpen = Boolean(confirmation || pendingFiles.length || renameOpen || linkEditor.open || footnoteEditor.open || guideOpen || commandOpen || builder)
       if (dialogOpen) return
       if (event.key === 'F2' && !command) {
         if (targetIsInput) return
@@ -909,8 +944,7 @@ export default function App() {
       if (key === 'l' && event.shiftKey) { event.preventDefault(); changeMode('rich') }
       if (key === 'e' && event.shiftKey) { event.preventDefault(); changeMode('source') }
       if (key === 'd' && event.shiftKey) { event.preventDefault(); changeMode('split') }
-      if (key === 'p' && event.altKey) { event.preventDefault(); changeMode('preview') }
-      if (key === 'o' && event.shiftKey) { event.preventDefault(); setOutlineCollapsed((current) => !current) }
+      if (key === 'o' && event.shiftKey) { event.preventDefault(); toggleOutline() }
       if (key === 'f' && event.shiftKey) { event.preventDefault(); toggleFocusMode() }
       if (key === '/') { event.preventDefault(); setGuideOpen(true) }
       if (key === 'z' && event.shiftKey && editorHasFocus) { event.preventDefault(); redo() }
@@ -922,7 +956,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [activateDocument, activeId, builder, changeMode, commandOpen, confirmation, createDocument, exportMarkdown, guideOpen, linkEditor.open, openFilePicker, openLinkEditor, openRename, pendingFiles.length, redo, renameOpen, requestClose, toggleFocusMode, undo, workspace.tabs])
+  }, [activateDocument, activeId, builder, changeMode, commandOpen, confirmation, createDocument, exportMarkdown, footnoteEditor.open, guideOpen, linkEditor.open, openFilePicker, openLinkEditor, openRename, pendingFiles.length, redo, renameOpen, requestClose, toggleFocusMode, toggleOutline, undo, workspace.tabs])
 
   const sourceFormatState = useMemo(() => {
     const state = getFormattingState(activeTab.markdown, selection.start, selection.end)
@@ -949,6 +983,7 @@ export default function App() {
     { id: 'rename', label: 'Renombrar documento', shortcut: 'F2', keywords: 'nombre título', action: openRename },
     { id: 'export', label: 'Exportar Markdown', shortcut: '⌘S', keywords: 'guardar descargar', action: exportMarkdown },
     { id: 'export-html', label: 'Exportar página web', keywords: 'html descargar', action: exportHtml },
+    { id: 'export-pdf', label: 'Exportar PDF', keywords: 'imprimir guardar documento', action: exportPdf },
     { id: 'bold', label: 'Aplicar negrita', shortcut: '⌘B', keywords: 'formato fuerte', action: () => applyFormat('bold') },
     { id: 'italic', label: 'Aplicar cursiva', shortcut: '⌘I', keywords: 'formato énfasis', action: () => applyFormat('italic') },
     { id: 'link', label: 'Añadir o editar enlace', shortcut: '⌘K', keywords: 'url vínculo', action: () => openLinkEditor('link') },
@@ -958,11 +993,10 @@ export default function App() {
     { id: 'footnote', label: 'Insertar nota al pie', keywords: 'referencia avanzado', action: () => applyAdvancedAction('footnote') },
     { id: 'mermaid', label: 'Insertar diagrama Mermaid', keywords: 'gráfico flujo avanzado', action: () => applyAdvancedAction('mermaid') },
     { id: 'codeblock', label: 'Insertar bloque de código', keywords: 'fence avanzado', action: () => applyAdvancedAction('codeblock') },
-    { id: 'outline', label: outlineCollapsed ? 'Mostrar estructura' : 'Ocultar estructura', shortcut: '⌘⇧O', action: () => setOutlineCollapsed((current) => !current) },
+    { id: 'outline', label: !hasOutlineHeadings ? 'Estructura vacía' : effectiveOutlineCollapsed ? 'Mostrar estructura' : 'Ocultar estructura', shortcut: '⌘⇧O', disabled: !hasOutlineHeadings, action: toggleOutline },
     { id: 'rich', label: 'Cambiar a edición enriquecida', shortcut: '⌘⇧L', keywords: 'wysiwyg documento word', action: () => changeMode('rich') },
     { id: 'source', label: 'Cambiar a Markdown', shortcut: '⌘⇧E', keywords: 'fuente código crudo', action: () => changeMode('source') },
-    { id: 'split', label: 'Comparar Markdown y lectura', shortcut: '⌘⇧D', action: () => changeMode('split') },
-    { id: 'preview', label: 'Cambiar a lectura', shortcut: '⌘⌥P', action: () => changeMode('preview') },
+    { id: 'split', label: 'Comparar Markdown y resultado', shortcut: '⌘⇧D', action: () => changeMode('split') },
     { id: 'focus', label: focusMode ? 'Salir del modo concentración' : 'Entrar en modo concentración', shortcut: '⌘⇧F', action: toggleFocusMode },
     { id: 'guide', label: 'Abrir guía rápida', shortcut: '⌘/', action: () => setGuideOpen(true) },
   ]
@@ -992,7 +1026,7 @@ export default function App() {
 
   return (
     <div
-      className={`app-shell${focusMode ? ' is-focus-mode' : ''}`}
+      className={`app-shell is-mode-${mode}${focusMode ? ' is-focus-mode' : ''}`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -1003,10 +1037,10 @@ export default function App() {
         mode={mode}
         saveState={saveState}
         onModeChange={changeMode}
-        onNew={createDocument}
         onOpen={openFilePicker}
         onDownload={exportMarkdown}
         onExportHtml={exportHtml}
+        onExportPdf={exportPdf}
         onCommand={() => setCommandOpen(true)}
         onRename={openRename}
       />
@@ -1015,7 +1049,7 @@ export default function App() {
         onFormat={applyFormat}
         onHeading={applyHeading}
         formatState={formatState}
-        disabled={mode === 'preview'}
+        disabled={false}
         onUndo={undo}
         onRedo={redo}
         guideOpen={guideOpen}
@@ -1031,7 +1065,16 @@ export default function App() {
         advancedOpen={advancedOpen}
         onAdvancedOpenChange={(open) => {
           setAdvancedOpen(open)
-          if (open) setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+          if (open) {
+            setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+            setFootnoteEditor({ open: false })
+          }
+        }}
+        footnoteEditor={{
+          ...footnoteEditor,
+          onSubmit: submitFootnoteEditor,
+          onClose: closeFootnoteEditor,
+          onRestoreFocus: restoreActiveEditorFocus,
         }}
       />
       <input ref={fileInputRef} hidden tabIndex="-1" aria-hidden="true" type="file" multiple accept=".md,.markdown,.txt,text/markdown,text/plain" onChange={handleFileInput} />
@@ -1050,11 +1093,11 @@ export default function App() {
         richEditorRef={richEditorRef}
         onRichFormatStateChange={setRichFormatState}
         onEditMermaid={editRichMermaid}
-        outlineCollapsed={outlineCollapsed}
-        onToggleOutline={() => setOutlineCollapsed((current) => !current)}
+        outlineCollapsed={effectiveOutlineCollapsed}
+        onToggleOutline={toggleOutline}
         onNavigate={navigateToLine}
       />
-      <StatusBar words={wordCount} cursor={cursor} mode={mode} dirty={activeTab.dirty} saveState={saveState} />
+      <StatusBar words={wordCount} cursor={cursor} mode={mode} />
       <QuickGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
       <DropOverlay visible={dropActive} />
       {focusMode ? (

@@ -55,6 +55,26 @@ test('el documento enriquecido conserva el dialecto avanzado de Línea', () => {
   editor.destroy()
 })
 
+test('un documento vacío usa un párrafo y no crea una nota al pie implícita', () => {
+  const editor = editorFor('Contenido temporal')
+  const emptyDocument = editor.schema.topNodeType.createAndFill()
+
+  assert.equal(emptyDocument.firstChild?.type.name, 'paragraph')
+  assert.equal(emptyDocument.textContent, '')
+  assert.equal(editor.markdown.serialize(emptyDocument.toJSON()), '')
+  assert.equal(emptyDocument.toJSON().content.some((node) => node.type === 'footnoteDefinition'), false)
+  editor.destroy()
+})
+
+test('bajar la prioridad no elimina notas al pie existentes', () => {
+  const source = 'Texto con referencia[^nota].\n\n[^nota]: Contenido conservado'
+  const editor = editorFor(source)
+
+  assert.equal(editor.getMarkdown(), source)
+  assert.equal(editor.getJSON().content.some((node) => node.type === 'footnoteDefinition'), true)
+  editor.destroy()
+})
+
 test('conserva pipes escapados y saltos dentro de celdas sin controles invisibles', () => {
   const editor = editorFor('| A | B |\n| --- | --- |\n| x\\|z | y |')
   let cellPosition = null

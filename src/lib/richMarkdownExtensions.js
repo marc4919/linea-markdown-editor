@@ -55,7 +55,10 @@ export const FootnoteReference = Node.create({
 
 export const FootnoteDefinition = Node.create({
   name: 'footnoteDefinition',
-  priority: 1100,
+  // Keep paragraphs ahead of this atom in the schema. ProseMirror fills an
+  // empty document with the first available block node; a higher priority here
+  // made every new rich document start with a synthetic footnote definition.
+  priority: 90,
   group: 'block',
   atom: true,
   selectable: true,

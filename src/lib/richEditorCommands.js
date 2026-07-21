@@ -1,4 +1,5 @@
 import { getMarkRange } from '@tiptap/core'
+import { TextSelection } from '@tiptap/pm/state'
 
 function topLevelInsertionPoint(editor) {
   const { $to } = editor.state.selection
@@ -98,4 +99,26 @@ export function insertRichImage(editor, attrs) {
 export function insertRichHorizontalRule(editor) {
   const rule = editor?.schema.nodes.horizontalRule?.create()
   return rule ? insertRichNodePreservingSelection(editor, rule) : false
+}
+
+export function insertRichFootnote(editor, { id, text } = {}) {
+  if (!editor) return false
+  const identifier = String(id ?? '').trim()
+  const content = String(text ?? '').trim()
+  const referenceType = editor.schema.nodes.footnoteReference
+  const definitionType = editor.schema.nodes.footnoteDefinition
+  const { selection } = editor.state
+
+  if (!identifier || !content || !referenceType || !definitionType || !selection.$to.parent.inlineContent) return false
+
+  const reference = referenceType.create({ id: identifier })
+  const definition = definitionType.create({ id: identifier, text: content })
+  const referencePosition = selection.to
+  const cursorPosition = referencePosition + reference.nodeSize
+  const transaction = editor.state.tr.insert(referencePosition, reference)
+  transaction.insert(transaction.doc.content.size, definition)
+
+  transaction.setSelection(TextSelection.near(transaction.doc.resolve(cursorPosition), 1))
+  editor.view.dispatch(transaction.scrollIntoView())
+  return true
 }

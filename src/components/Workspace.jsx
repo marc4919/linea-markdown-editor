@@ -79,8 +79,8 @@ export default function Workspace({
       >
         <div className="mobile-view-switch" role="group" aria-label="Vista del documento">
           <button type="button" className={mode === 'rich' ? 'is-active' : ''} aria-pressed={mode === 'rich'} onClick={() => onModeChange('rich')}>Enriquecido</button>
-          <button type="button" className={mode === 'source' || mode === 'split' ? 'is-active' : ''} aria-pressed={mode === 'source' || mode === 'split'} onClick={() => onModeChange('source')}>Markdown</button>
-          <button type="button" className={mode === 'preview' ? 'is-active' : ''} aria-pressed={mode === 'preview'} onClick={() => onModeChange('preview')}>Lectura</button>
+          <button type="button" className={mode === 'source' ? 'is-active' : ''} aria-pressed={mode === 'source'} onClick={() => onModeChange('source')}>Markdown</button>
+          <button type="button" className={mode === 'split' ? 'is-active' : ''} aria-pressed={mode === 'split'} onClick={() => onModeChange('split')}>Resultado</button>
         </div>
         {mode === 'rich' ? (
           <RichEditorPane
@@ -119,7 +119,7 @@ export default function Workspace({
             onKeyDown={resizeWithKeyboard}
           ><span aria-hidden="true">••<br />••</span></div>
         ) : null}
-        {mode === 'split' || mode === 'preview' ? <PreviewPane markdown={markdown} /> : null}
+        {mode === 'split' ? <PreviewPane markdown={markdown} /> : null}
       </main>
     </div>
   )

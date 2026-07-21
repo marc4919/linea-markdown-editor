@@ -10,17 +10,31 @@ export function getHeadings(markdown) {
 
 export default function OutlinePane({ markdown, collapsed, onToggle, onNavigate }) {
   const headings = getHeadings(markdown)
+  const hasHeadings = headings.length > 0
+  const effectiveCollapsed = collapsed || !hasHeadings
+  const toggle = () => {
+    if (!hasHeadings) return
+    onToggle()
+  }
+
   return (
-    <aside className={`outline-pane${collapsed ? ' is-collapsed' : ''}`} aria-label="Estructura del documento">
+    <aside className={`outline-pane${effectiveCollapsed ? ' is-collapsed' : ''}${!hasHeadings ? ' is-empty' : ''}`} aria-label="Estructura del documento">
       <div className="outline-header">
         <span>Estructura</span>
-        <button type="button" aria-label={collapsed ? 'Mostrar estructura' : 'Ocultar estructura'} aria-expanded={!collapsed} onClick={onToggle}>
+        <button
+          type="button"
+          aria-label={!hasHeadings ? 'Estructura vacía' : effectiveCollapsed ? 'Mostrar estructura' : 'Ocultar estructura'}
+          aria-expanded={!effectiveCollapsed}
+          disabled={!hasHeadings}
+          title={!hasHeadings ? 'Añade un título para crear la estructura' : undefined}
+          onClick={toggle}
+        >
           <ChevronDownIcon />
         </button>
       </div>
-      {!collapsed ? (
+      {!effectiveCollapsed ? (
         <nav className="outline-list" aria-label="Encabezados">
-          {headings.length ? headings.map((heading) => (
+          {headings.map((heading) => (
             <button
               key={`${heading.line}-${heading.text}`}
               type="button"
@@ -29,7 +43,7 @@ export default function OutlinePane({ markdown, collapsed, onToggle, onNavigate 
             >
               {heading.text}
             </button>
-          )) : <p>Los títulos aparecerán aquí.</p>}
+          ))}
         </nav>
       ) : null}
     </aside>

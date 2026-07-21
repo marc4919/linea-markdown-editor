@@ -5,8 +5,10 @@ import { TableKit } from '@tiptap/extension-table'
 import Image from '@tiptap/extension-image'
 import { Markdown } from '@tiptap/markdown'
 import StarterKit from '@tiptap/starter-kit'
+import { richFootnoteExtensions } from './richMarkdownExtensions.js'
 import {
   getRichLinkState,
+  insertRichFootnote,
   insertRichImage,
   insertRichHorizontalRule,
   insertRichMarkdownPreservingSelection,
@@ -140,5 +142,60 @@ test('inserta un separador sin borrar ni partir el texto seleccionado', () => {
 
   const markdown = editor.getMarkdown()
   assert.match(markdown, /^Antes después\n\n---$/)
+  editor.destroy()
+})
+
+test('inserta una referencia inline tras la selección y la definición al final', () => {
+  const editor = new Editor({
+    extensions: [StarterKit, Markdown, ...richFootnoteExtensions()],
+    content: 'Una frase importante.',
+    contentType: 'markdown',
+  })
+  editor.commands.setTextSelection({ from: 5, to: 10 })
+  const transactions = []
+  editor.on('transaction', ({ transaction }) => transactions.push(transaction))
+
+  assert.equal(insertRichFootnote(editor, { id: 1, text: 'Contexto adicional' }), true)
+  assert.equal(editor.getMarkdown(), 'Una frase[^1] importante.\n\n[^1]: Contexto adicional')
+  assert.equal(editor.state.selection.empty, true)
+  assert.equal(editor.state.selection.$from.nodeBefore?.type.name, 'footnoteReference')
+  assert.equal(editor.state.doc.lastChild?.type.name, 'footnoteDefinition')
+  assert.equal(editor.state.doc.lastChild?.attrs.text, 'Contexto adicional')
+  assert.equal(transactions.length, 1)
+  assert.equal(transactions[0].steps.length, 2)
+  assert.equal(transactions[0].docChanged, true)
+  editor.destroy()
+})
+
+test('coordina una nota nueva con las existentes sin crear un párrafo de referencia', () => {
+  const editor = new Editor({
+    extensions: [StarterKit, Markdown, ...richFootnoteExtensions()],
+    content: 'Texto[^1]\n\n[^1]: Primera nota',
+    contentType: 'markdown',
+  })
+  editor.commands.setTextSelection(6)
+
+  insertRichFootnote(editor, { id: 2, text: 'Segunda nota' })
+
+  assert.equal(editor.getMarkdown(), 'Texto[^2][^1]\n\n[^1]: Primera nota\n\n[^2]: Segunda nota')
+  assert.equal(editor.state.doc.child(0).type.name, 'paragraph')
+  assert.equal(editor.state.doc.child(0).child(1).type.name, 'footnoteReference')
+  assert.equal(editor.state.doc.child(0).child(2).type.name, 'footnoteReference')
+  assert.equal(editor.state.doc.childCount, 3)
+  editor.destroy()
+})
+
+test('rechaza una nota enriquecida vacía sin mutar documento ni selección', () => {
+  const editor = new Editor({
+    extensions: [StarterKit, Markdown, ...richFootnoteExtensions()],
+    content: 'Texto intacto',
+    contentType: 'markdown',
+  })
+  editor.commands.setTextSelection({ from: 2, to: 7 })
+  const before = editor.state.selection.toJSON()
+
+  assert.equal(insertRichFootnote(editor, { id: 1, text: '   ' }), false)
+  assert.equal(editor.getMarkdown(), 'Texto intacto')
+  assert.deepEqual(editor.state.selection.toJSON(), before)
   editor.destroy()
 })

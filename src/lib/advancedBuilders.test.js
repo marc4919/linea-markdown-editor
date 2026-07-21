@@ -3,9 +3,11 @@ import assert from 'node:assert/strict'
 import {
   createMermaidSource,
   createTableMarkdown,
+  getMermaidFlowchartStepIndex,
   getDefaultMermaidSpec,
   insertConfiguredTable,
   insertConfiguredMermaid,
+  reorderMermaidItems,
 } from './advancedBuilders.js'
 
 test('crea una tabla configurable con cabecera y filas de datos', () => {
@@ -188,6 +190,49 @@ test('genera un flujo con identificadores internos y etiquetas seguras', () => {
   assert.match(source, /^flowchart LR/)
   assert.match(source, /n2\["Borrador”］ injected --› node"\]/)
   assert.equal(source.split('\n').filter((line) => line.includes('-->')).length, 2)
+})
+
+test('reordena elementos Mermaid sin mutar la lista original', () => {
+  const original = ['Idea', 'Borrador', 'Publicación']
+  const reordered = reorderMermaidItems(original, 0, 2)
+
+  assert.deepEqual(reordered, ['Borrador', 'Publicación', 'Idea'])
+  assert.deepEqual(original, ['Idea', 'Borrador', 'Publicación'])
+  assert.equal(reorderMermaidItems(original, -1, 2), original)
+})
+
+test('relaciona los nodos internos del flujo con el paso editable', () => {
+  assert.equal(getMermaidFlowchartStepIndex('flowchart-n2-17', 3), 1)
+  assert.equal(getMermaidFlowchartStepIndex('n1', 3), 0)
+  assert.equal(getMermaidFlowchartStepIndex('flowchart-n4-17', 3), null)
+  assert.equal(getMermaidFlowchartStepIndex('edge-n1-n2', 3), 0)
+  assert.equal(getMermaidFlowchartStepIndex('actor1', 3), null)
+})
+
+test('explica qué dato falta en los asistentes Mermaid', () => {
+  assert.throws(() => createMermaidSource({
+    type: 'flowchart',
+    steps: ['Idea', ''],
+  }), /nombre para el paso 2/)
+  assert.throws(() => createMermaidSource({
+    type: 'sequence',
+    participants: ['Usuario', 'Línea'],
+    messages: [{ from: 0, to: 1, text: '' }],
+  }), /texto del mensaje 1/)
+  assert.throws(() => createMermaidSource({
+    type: 'timeline',
+    events: [
+      { period: 'Julio', text: 'Borrador' },
+      { period: '', text: 'Publicación' },
+    ],
+  }), /etapa o fecha para el evento 2/)
+  assert.throws(() => createMermaidSource({
+    type: 'pie',
+    slices: [
+      { label: 'Texto', value: 70 },
+      { label: '', value: 30 },
+    ],
+  }), /nombre para la categoría 2/)
 })
 
 test('genera secuencias con alias controlados y valida sus referencias', () => {

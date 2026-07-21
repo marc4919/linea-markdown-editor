@@ -42,8 +42,8 @@ export default function PreviewPane({ markdown }) {
   return (
     <section className="pane preview-pane" aria-labelledby="preview-heading">
       <div className="pane-heading" id="preview-heading">
-        <span>Lectura</span>
-        <small>Vista limpia y siempre sincronizada</small>
+        <span>Resultado</span>
+        <small>Vista renderizada y siempre sincronizada</small>
       </div>
       <article ref={articleRef} className="markdown-preview" dangerouslySetInnerHTML={{ __html: rendered }} />
     </section>

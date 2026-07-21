@@ -11,6 +11,7 @@ import {
   UndoIcon,
 } from './Icons.jsx'
 import AdvancedMenu from './AdvancedMenu.jsx'
+import FootnotePopover from './FootnotePopover.jsx'
 import LinkPopover from './LinkPopover.jsx'
 
 const tools = [
@@ -36,6 +37,7 @@ export default function FormattingToolbar({
   onAdvancedAction,
   advancedOpen,
   onAdvancedOpenChange,
+  footnoteEditor,
 }) {
   const headingValue = formatState.headingLevel ? String(formatState.headingLevel) : '0'
   const blockFormattingDisabled = Boolean(formatState.blockFormattingDisabled)
@@ -113,13 +115,16 @@ export default function FormattingToolbar({
           )
         })}
       </div>
-      <AdvancedMenu
-        disabled={disabled}
-        disabledActions={blockFormattingDisabled ? ['task', 'codeblock', 'rule'] : []}
-        open={resolvedAdvancedOpen}
-        onOpenChange={setAdvancedOpen}
-        onAction={onAdvancedAction}
-      />
+      <div className="footnote-tool-wrapper">
+        <AdvancedMenu
+          disabled={disabled}
+          disabledActions={blockFormattingDisabled ? ['task', 'codeblock', 'rule'] : []}
+          open={resolvedAdvancedOpen}
+          onOpenChange={setAdvancedOpen}
+          onAction={onAdvancedAction}
+        />
+        <FootnotePopover {...footnoteEditor} />
+      </div>
       <button
         className={`guide-button${guideOpen ? ' is-active' : ''}`}
         type="button"

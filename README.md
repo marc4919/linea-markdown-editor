@@ -10,10 +10,10 @@ Un espacio local y tranquilo para escribir Markdown. Línea combina edición y v
 - Atajos de teclado para formato, documentos y comandos.
 - Apertura de uno o varios archivos con selector o arrastrando sobre la app.
 - Confirmación antes de cerrar o reemplazar trabajo sin exportar.
-- Exportación a Markdown y HTML.
+- Exportación a Markdown, HTML y PDF mediante el diálogo nativo del navegador.
 - Esquema navegable de encabezados.
-- Vista Editar, Dividir y Vista previa; comportamiento adaptado para móvil.
-- Paleta de comandos con `⌘K` o `Ctrl+K`.
+- Edición enriquecida, Markdown y comparación con resultado renderizado; comportamiento adaptado para móvil.
+- Paleta de comandos con `⌘⇧P` o `Ctrl+Shift+P`.
 - Modo concentración y guía rápida.
 - Guardado automático local con estado real de éxito o error.
 

@@ -84,6 +84,31 @@ function escapeMermaidText(value, fallback) {
     .replace(/[&<>"':#;`{}\[\]()]/g, (character) => MERMAID_SAFE_PUNCTUATION[character])
 }
 
+function requiredMermaidText(value, message) {
+  const normalized = singleLine(value)
+  if (!normalized) throw new TypeError(message)
+  return normalized.replace(/[&<>"':#;`{}\[\]()]/g, (character) => MERMAID_SAFE_PUNCTUATION[character])
+}
+
+export function reorderMermaidItems(items, fromIndex, toIndex) {
+  if (!Array.isArray(items)) throw new TypeError('Los elementos del diagrama deben ser una lista.')
+  const from = Number(fromIndex)
+  const to = Number(toIndex)
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= items.length || to >= items.length || from === to) {
+    return items
+  }
+  const reordered = [...items]
+  const [moved] = reordered.splice(from, 1)
+  reordered.splice(to, 0, moved)
+  return reordered
+}
+
+export function getMermaidFlowchartStepIndex(identifier, stepCount) {
+  const match = String(identifier ?? '').match(/(?:^|-)n(\d+)(?:-|$)/)
+  const index = match ? Number(match[1]) - 1 : -1
+  return Number.isInteger(index) && index >= 0 && index < Number(stepCount) ? index : null
+}
+
 function normalizeSelection(text, selectionStart = 0, selectionEnd = selectionStart) {
   const length = text.length
   const first = Math.min(length, Math.max(0, Number.isFinite(selectionStart) ? Math.trunc(selectionStart) : 0))
@@ -243,7 +268,10 @@ function createFlowchartSource(spec) {
   const direction = FLOW_DIRECTIONS.has(spec.direction) ? spec.direction : DEFAULT_MERMAID_SPECS.flowchart.direction
   const lines = [`flowchart ${direction}`]
   steps.forEach((step, index) => {
-    const label = escapeMermaidText(typeof step === 'object' ? step?.label : step, `Paso ${index + 1}`)
+    const label = requiredMermaidText(
+      typeof step === 'object' ? step?.label : step,
+      `Escribe un nombre para el paso ${index + 1}.`,
+    )
     lines.push(`  n${index + 1}["${label}"]`)
   })
   for (let index = 1; index < steps.length; index += 1) lines.push(`  n${index} --> n${index + 1}`)
@@ -263,14 +291,17 @@ function createSequenceSource(spec) {
   const messages = boundedList(spec.messages, 'La lista de mensajes', MERMAID_LIMITS.messages, DEFAULT_MERMAID_SPECS.sequence.messages)
   const lines = ['sequenceDiagram']
   participants.forEach((participant, index) => {
-    const label = escapeMermaidText(typeof participant === 'object' ? participant?.label : participant, `Participante ${index + 1}`)
+    const label = requiredMermaidText(
+      typeof participant === 'object' ? participant?.label : participant,
+      `Escribe el nombre del participante ${index + 1}.`,
+    )
     lines.push(`  participant p${index + 1} as ${label}`)
   })
   messages.forEach((message, index) => {
     const from = participantIndex(message?.from, participants.length, `El origen del mensaje ${index + 1}`)
     const to = participantIndex(message?.to, participants.length, `El destino del mensaje ${index + 1}`)
     const arrow = MESSAGE_KINDS.has(message?.kind) && message.kind === 'reply' ? '-->>' : '->>'
-    const text = escapeMermaidText(message?.text, `Mensaje ${index + 1}`)
+    const text = requiredMermaidText(message?.text, `Escribe el texto del mensaje ${index + 1}.`)
     lines.push(`  p${from + 1}${arrow}p${to + 1}: ${text}`)
   })
   return lines.join('\n')
@@ -281,8 +312,8 @@ function createTimelineSource(spec) {
   const title = escapeMermaidText(spec.title, DEFAULT_MERMAID_SPECS.timeline.title)
   const lines = ['timeline', `  title ${title}`]
   events.forEach((event, index) => {
-    const period = escapeMermaidText(event?.period, `Etapa ${index + 1}`)
-    const text = escapeMermaidText(event?.text, `Evento ${index + 1}`)
+    const period = requiredMermaidText(event?.period, `Escribe una etapa o fecha para el evento ${index + 1}.`)
+    const text = requiredMermaidText(event?.text, `Escribe una descripción para el evento ${index + 1}.`)
     lines.push(`  ${period} : ${text}`)
   })
   return lines.join('\n')
@@ -293,7 +324,7 @@ function createPieSource(spec) {
   const title = escapeMermaidText(spec.title, DEFAULT_MERMAID_SPECS.pie.title)
   const lines = [spec.showData === false ? 'pie' : 'pie showData', `  title ${title}`]
   slices.forEach((slice, index) => {
-    const label = escapeMermaidText(slice?.label, `Categoría ${index + 1}`)
+    const label = requiredMermaidText(slice?.label, `Escribe un nombre para la categoría ${index + 1}.`)
     const value = Number(slice?.value)
     if (!Number.isFinite(value) || value <= 0 || value > 1_000_000_000) {
       throw new RangeError(`El valor de la categoría ${index + 1} debe ser mayor que cero.`)

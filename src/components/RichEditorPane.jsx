@@ -7,6 +7,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { createRichCodeBlock } from './RichCodeBlockNodeView.jsx'
 import {
   getRichLinkState,
+  insertRichFootnote,
   insertRichHorizontalRule,
   insertRichImage,
   insertRichMarkdownPreservingSelection,
@@ -176,6 +177,9 @@ const RichEditorPane = forwardRef(function RichEditorPane({
     },
     insertMarkdown(source) {
       return insertRichMarkdownPreservingSelection(editor, source)
+    },
+    insertFootnote({ id, text }) {
+      return insertRichFootnote(editor, { id, text })
     },
     setMermaid(source, position) {
       if (!editor) return false

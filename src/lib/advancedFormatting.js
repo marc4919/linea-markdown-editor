@@ -94,14 +94,36 @@ export function insertHorizontalRule(text, selectionStart = 0, selectionEnd = se
   return blockInsertion(text, selectionStart, selectionEnd, '---')
 }
 
-export function insertFootnote(text, selectionStart = 0, selectionEnd = selectionStart) {
-  const { start, end } = normalizeSelection(text, selectionStart, selectionEnd)
+export function createFootnoteMarkdown(text, noteContent) {
+  const content = String(noteContent ?? '').trim()
+  if (!content) return null
   const identifiers = [...text.matchAll(/\[\^(\d+)\]/g)].map((match) => Number(match[1]))
   const identifier = Math.max(0, ...identifiers) + 1
   const reference = `[^${identifier}]`
-  const suffix = `${text.endsWith('\n') || !text ? '' : '\n'}\n[^${identifier}]: Nota al pie`
+  const definition = `[^${identifier}]: ${content}`
+  return {
+    identifier,
+    reference,
+    definition,
+    markdown: `${reference}\n\n${definition}`,
+  }
+}
+
+export function insertFootnoteWithContent(text, selectionStart = 0, selectionEnd = selectionStart, noteContent = '') {
+  const { start, end } = normalizeSelection(text, selectionStart, selectionEnd)
+  const footnote = createFootnoteMarkdown(text, noteContent)
+  if (!footnote) return result(text, start, end)
+
+  const suffix = `${text.endsWith('\n') || !text ? '' : '\n'}\n${footnote.definition}`
   const insertionPoint = start === end ? start : end
-  const nextText = text.slice(0, insertionPoint) + reference + text.slice(insertionPoint) + suffix
+  const nextText = text.slice(0, insertionPoint) + footnote.reference + text.slice(insertionPoint) + suffix
+  const cursor = insertionPoint + footnote.reference.length
+  return result(nextText, cursor)
+}
+
+export function insertFootnote(text, selectionStart = 0, selectionEnd = selectionStart) {
+  const edit = insertFootnoteWithContent(text, selectionStart, selectionEnd, 'Nota al pie')
+  const nextText = edit.text
   const noteStart = nextText.length - 'Nota al pie'.length
   return result(nextText, noteStart, nextText.length)
 }
