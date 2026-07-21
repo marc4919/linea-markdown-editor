@@ -39,6 +39,23 @@ export function toggleStrikethrough(text, selectionStart = 0, selectionEnd = sel
   return result(nextText, start + 2, start + 2 + content.length)
 }
 
+export function toggleUnderline(text, selectionStart = 0, selectionEnd = selectionStart) {
+  const { start, end } = normalizeSelection(text, selectionStart, selectionEnd)
+  const selected = text.slice(start, end)
+  const enclosingStart = start >= 2 && text.slice(start - 2, start) === '++' ? start - 2 : -1
+  const enclosingEnd = end + 2 <= text.length && text.slice(end, end + 2) === '++' ? end + 2 : -1
+
+  if (enclosingStart >= 0 && enclosingEnd >= 0) {
+    const nextText = text.slice(0, enclosingStart) + selected + text.slice(enclosingEnd)
+    return result(nextText, enclosingStart, enclosingStart + selected.length)
+  }
+
+  const content = selected || 'texto subrayado'
+  const insertion = `++${content}++`
+  const nextText = text.slice(0, start) + insertion + text.slice(end)
+  return result(nextText, start + 2, start + 2 + content.length)
+}
+
 export function insertTable(text, selectionStart = 0, selectionEnd = selectionStart) {
   const template = '| Columna 1 | Columna 2 |\n| --- | --- |\n| Dato | Dato |'
   return blockInsertion(text, selectionStart, selectionEnd, template, 'Columna 1')

@@ -26,6 +26,27 @@ const markdownRenderer = new MarkdownIt({
 markdownRenderer.use(taskLists, { enabled: false, label: false })
 markdownRenderer.use(footnote)
 
+// Línea uses ++text++ as an explicit, HTML-free underline extension. This is
+// also the syntax emitted by the rich editor, so source and reading stay equal.
+markdownRenderer.inline.ruler.before('emphasis', 'linea_underline', (state, silent) => {
+  const start = state.pos
+  if (state.src.slice(start, start + 2) !== '++') return false
+  const end = state.src.indexOf('++', start + 2)
+  if (end < 0 || end === start + 2 || state.src.slice(start + 2, end).includes('\n')) return false
+
+  if (!silent) {
+    const open = state.push('underline_open', 'u', 1)
+    open.markup = '++'
+    const children = []
+    state.md.inline.parse(state.src.slice(start + 2, end), state.md, state.env, children)
+    state.tokens.push(...children)
+    const close = state.push('underline_close', 'u', -1)
+    close.markup = '++'
+  }
+  state.pos = end + 2
+  return true
+})
+
 // Preserve Línea's existing compact paragraph output. Browsers collapse this
 // space exactly as they collapsed the previous renderer's joined lines.
 markdownRenderer.renderer.rules.softbreak = () => ' '

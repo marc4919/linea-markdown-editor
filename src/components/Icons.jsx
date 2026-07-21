@@ -50,5 +50,6 @@ export const TaskIcon = () => <Icon><rect x="3" y="4" width="6" height="6" rx="1
 export const ImageIcon = () => <Icon><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8" cy="9" r="1.5" /><path d="m4 18 5-5 3 3 2-2 6 6" /></Icon>
 export const FootnoteIcon = () => <Icon><path d="M5 5h8M9 5v12M5 17h8M16 8h4M18 6v4M16 14h4M16 18h4" /></Icon>
 export const StrikeIcon = () => <Icon><path d="M7 7.5c.7-1.4 2.2-2.2 4.3-2.2 2.4 0 4 .9 4.7 2.7M8 16.5c.9 1.4 2.3 2.2 4.2 2.2 2.5 0 4.3-1.2 4.3-3.2 0-1.8-1.2-2.7-4.5-3.5M4 12h16" /></Icon>
+export const UnderlineIcon = () => <Icon><path d="M7 4v7a5 5 0 0 0 10 0V4M5 20h14" /></Icon>
 export const RuleIcon = () => <Icon><path d="M4 12h16" /></Icon>
 export const DiagramIcon = () => <Icon><rect x="3" y="4" width="6" height="5" rx="1" /><rect x="15" y="15" width="6" height="5" rx="1" /><path d="M9 6.5h4a4 4 0 0 1 4 4V15M15 17.5h-4a4 4 0 0 1-4-4V9" /></Icon>

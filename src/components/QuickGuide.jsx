@@ -5,6 +5,7 @@ const examples = [
   ['Cabeceras', '# H1 · ## H2 · ### H3'],
   ['Negrita', '**texto importante**'],
   ['Cursiva', '_texto con énfasis_'],
+  ['Subrayado', '++texto subrayado++'],
   ['Enlace', '[nombre](https://...)'],
   ['Lista', '- Un elemento'],
   ['Tarea', '- [ ] Pendiente'],
@@ -34,7 +35,7 @@ export default function QuickGuide({ open, onClose }) {
         </div>
         <button ref={closeRef} type="button" aria-label="Cerrar guía" onClick={onClose}><CloseIcon /></button>
       </div>
-      <p className="guide-intro">Escribe directamente en Live para ver el formato mientras trabajas. Usa Fuente cuando quieras controlar cada carácter de Markdown.</p>
+      <p className="guide-intro">Usa Enriquecido para escribir como en un documento. Cambia a Markdown cuando quieras controlar directamente cada carácter de la sintaxis.</p>
       <dl>
         {examples.map(([term, example]) => (
           <div key={term}><dt>{term}</dt><dd><code>{example}</code></dd></div>

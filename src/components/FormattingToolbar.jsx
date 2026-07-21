@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react'
 import {
   BoldIcon,
   CodeIcon,
@@ -33,17 +34,32 @@ export default function FormattingToolbar({
   onRequestLink,
   linkEditor,
   onAdvancedAction,
+  advancedOpen,
+  onAdvancedOpenChange,
 }) {
   const headingValue = formatState.headingLevel ? String(formatState.headingLevel) : '0'
+  const blockFormattingDisabled = Boolean(formatState.blockFormattingDisabled)
+  const [internalAdvancedOpen, setInternalAdvancedOpen] = useState(false)
+  const advancedControlled = advancedOpen !== undefined
+  const resolvedAdvancedOpen = advancedControlled ? Boolean(advancedOpen) : internalAdvancedOpen
+  const setAdvancedOpen = useCallback((nextOpen) => {
+    const next = Boolean(nextOpen)
+    if (!advancedControlled) setInternalAdvancedOpen(next)
+    onAdvancedOpenChange?.(next)
+  }, [advancedControlled, onAdvancedOpenChange])
+  const closeAdvanced = useCallback(() => {
+    if (resolvedAdvancedOpen) setAdvancedOpen(false)
+  }, [resolvedAdvancedOpen, setAdvancedOpen])
+
   return (
     <nav className={`formatting-toolbar${disabled ? ' is-disabled' : ''}`} aria-label="Herramientas de formato">
       <div className="history-tools" aria-label="Historial">
-        <button type="button" aria-label="Deshacer" title="Deshacer (⌘Z)" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={onUndo}><UndoIcon /></button>
-        <button type="button" aria-label="Rehacer" title="Rehacer (⇧⌘Z)" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={onRedo}><RedoIcon /></button>
+        <button type="button" aria-label="Deshacer" title="Deshacer (⌘Z)" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => { closeAdvanced(); onUndo?.() }}><UndoIcon /></button>
+        <button type="button" aria-label="Rehacer" title="Rehacer (⇧⌘Z)" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => { closeAdvanced(); onRedo?.() }}><RedoIcon /></button>
       </div>
       <label className="heading-control">
         <span className="sr-only">Estilo de párrafo</span>
-        <select value={headingValue} disabled={disabled} onChange={(event) => onHeading(Number(event.target.value))}>
+        <select value={headingValue} disabled={disabled || blockFormattingDisabled} onChange={(event) => { closeAdvanced(); onHeading?.(Number(event.target.value)) }}>
           <option value="0">Párrafo</option>
           <option value="1">H1</option>
           <option value="2">H2</option>
@@ -56,6 +72,7 @@ export default function FormattingToolbar({
       <div className="formatting-tools">
         {tools.map(({ id, label, shortcut, icon: ToolIcon }) => {
           const active = Boolean(formatState[id])
+          const toolDisabled = disabled || (blockFormattingDisabled && (id === 'list' || id === 'quote'))
           if (id === 'link') {
             return (
               <div className="link-tool-wrapper" key={id}>
@@ -65,9 +82,9 @@ export default function FormattingToolbar({
                   aria-label="Enlace ⌘K"
                   aria-pressed={active}
                   title="Enlace (⌘K)"
-                  disabled={disabled}
+                  disabled={toolDisabled}
                   onMouseDown={(event) => event.preventDefault()}
-                  onClick={onRequestLink}
+                  onClick={() => { closeAdvanced(); onRequestLink?.() }}
                 >
                   <LinkIcon />
                   <span>Enlace</span>
@@ -85,9 +102,9 @@ export default function FormattingToolbar({
               aria-label={`${label}${shortcut ? ` ${shortcut}` : ''}`}
               aria-pressed={active}
               title={`${label}${shortcut ? ` (${shortcut})` : ''}`}
-              disabled={disabled}
+              disabled={toolDisabled}
               onMouseDown={(event) => event.preventDefault()}
-              onClick={() => onFormat(id)}
+              onClick={() => { closeAdvanced(); onFormat?.(id) }}
             >
               <ToolIcon />
               <span>{label}</span>
@@ -96,13 +113,19 @@ export default function FormattingToolbar({
           )
         })}
       </div>
-      <AdvancedMenu disabled={disabled} onAction={onAdvancedAction} />
+      <AdvancedMenu
+        disabled={disabled}
+        disabledActions={blockFormattingDisabled ? ['task', 'codeblock', 'rule'] : []}
+        open={resolvedAdvancedOpen}
+        onOpenChange={setAdvancedOpen}
+        onAction={onAdvancedAction}
+      />
       <button
         className={`guide-button${guideOpen ? ' is-active' : ''}`}
         type="button"
         aria-label="Guía rápida"
         aria-expanded={guideOpen}
-        onClick={onToggleGuide}
+        onClick={() => { closeAdvanced(); onToggleGuide?.() }}
       >
         <HelpIcon />
         <span>Guía</span>

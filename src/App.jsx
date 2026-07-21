@@ -6,8 +6,10 @@ import DropOverlay from './components/DropOverlay.jsx'
 import FormattingToolbar from './components/FormattingToolbar.jsx'
 import QuickGuide from './components/QuickGuide.jsx'
 import StatusBar from './components/StatusBar.jsx'
+import TableBuilderDialog from './components/TableBuilderDialog.jsx'
 import Toolbar from './components/Toolbar.jsx'
 import Workspace from './components/Workspace.jsx'
+import MermaidBuilderDialog from './components/MermaidBuilderDialog.jsx'
 import { STARTER_MARKDOWN } from './data.js'
 import {
   getFormattingState,
@@ -25,12 +27,17 @@ import {
   insertFootnote,
   insertHorizontalRule,
   insertImage,
-  insertMermaid,
-  insertTable,
   insertTask,
   toggleStrikethrough,
+  toggleUnderline,
 } from './lib/advancedFormatting.js'
+import {
+  getDefaultMermaidSpec,
+  insertConfiguredMermaid,
+  insertConfiguredTable,
+} from './lib/advancedBuilders.js'
 import { renderMarkdown } from './lib/markdown.js'
+import { richMarkdownNotice } from './lib/richMarkdownCompatibility.js'
 import {
   activateTab,
   closeTab,
@@ -177,7 +184,7 @@ export default function App() {
   const [saveState, setSaveState] = useState(() => restoreRef.current?.ok === false
     ? { kind: 'error', label: 'No se pudo recuperar' }
     : { kind: 'saved', label: 'Guardado en Línea' })
-  const [mode, setMode] = useState('live')
+  const [mode, setMode] = useState('rich')
   const [cursor, setCursor] = useState({ line: 1, column: 1 })
   const [selection, setSelection] = useState(EMPTY_SELECTION)
   const [guideOpen, setGuideOpen] = useState(false)
@@ -190,9 +197,13 @@ export default function App() {
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameValue, setRenameValue] = useState('')
   const [linkEditor, setLinkEditor] = useState({ open: false, kind: 'link', initialLabel: '', initialUrl: 'https://', canRemove: false })
+  const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [builder, setBuilder] = useState(null)
+  const [richFormatState, setRichFormatState] = useState({})
   const [notice, setNotice] = useState('')
   const fileInputRef = useRef(null)
   const textareaRef = useRef(null)
+  const richEditorRef = useRef(null)
   const linkSelectionRef = useRef(EMPTY_SELECTION)
   const renameTabIdRef = useRef(null)
   const dragDepthRef = useRef(0)
@@ -201,6 +212,32 @@ export default function App() {
 
   const activeTab = getActiveTab(workspace)
   const activeId = activeTab.id
+
+  const changeMode = useCallback((nextMode) => {
+    if (nextMode === 'rich') {
+      const protectionNotice = richMarkdownNotice(activeTab.markdown)
+      if (protectionNotice) {
+        setMode('source')
+        setNotice(protectionNotice)
+        setAdvancedOpen(false)
+        setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+        setBuilder(null)
+        return
+      }
+    }
+    setMode(nextMode)
+    setAdvancedOpen(false)
+    setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+    setBuilder(null)
+  }, [activeTab.markdown])
+
+  useEffect(() => {
+    if (mode !== 'rich') return
+    const protectionNotice = richMarkdownNotice(activeTab.markdown)
+    if (!protectionNotice) return
+    setMode('source')
+    setNotice(protectionNotice)
+  }, [activeId, activeTab.markdown, mode])
 
   useEffect(() => {
     setSaveState({ kind: 'saving', label: 'Guardando…' })
@@ -221,6 +258,8 @@ export default function App() {
 
   useEffect(() => {
     setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+    setAdvancedOpen(false)
+    setBuilder(null)
     if (renameTabIdRef.current && renameTabIdRef.current !== activeId) setRenameOpen(false)
     setConfirmation((current) => current?.type === 'replace' && current.tabId !== activeId ? null : current)
   }, [activeId])
@@ -285,8 +324,8 @@ export default function App() {
     selectionsRef.current.set(activeId, selection)
     setWorkspace((current) => createTab(current))
     setSelection(EMPTY_SELECTION)
-    setMode((current) => current === 'preview' ? 'live' : current)
-    window.setTimeout(() => textareaRef.current?.focus(), 0)
+    setMode((current) => current === 'preview' ? 'rich' : current)
+    window.setTimeout(() => (richEditorRef.current || textareaRef.current)?.focus?.(), 0)
   }, [activeId, selection])
 
   const performClose = useCallback((tabId) => {
@@ -349,7 +388,7 @@ export default function App() {
     setWorkspace(next)
     setPendingFiles([])
     setSelection(EMPTY_SELECTION)
-    setMode((current) => current === 'preview' ? 'live' : current)
+    setMode((current) => current === 'preview' ? 'source' : current)
   }, [activeId, pendingFiles, selection, workspace])
 
   const performReplace = useCallback((tabId = activeId) => {
@@ -443,11 +482,40 @@ export default function App() {
   }, [restoreEditorSelection, updateMarkdown])
 
   const openLinkEditor = useCallback((kind = 'link') => {
+    setAdvancedOpen(false)
+
+    const openForRichEditor = () => {
+      const currentState = richEditorRef.current?.getLinkState?.() || { label: '', url: '', active: false }
+      linkSelectionRef.current = { editorKind: 'rich', tabId: activeId }
+      setLinkEditor({
+        open: true,
+        kind,
+        initialLabel: currentState.label || '',
+        initialUrl: kind === 'image' ? 'https://' : (currentState.url || 'https://'),
+        canRemove: kind === 'link' && currentState.active,
+      })
+    }
+
+    if (mode === 'rich') {
+      openForRichEditor()
+      return
+    }
+    if (mode === 'preview') {
+      const protectionNotice = richMarkdownNotice(activeTab.markdown)
+      if (protectionNotice) {
+        setMode('source')
+        setNotice(protectionNotice)
+        return
+      }
+      setMode('rich')
+      window.setTimeout(openForRichEditor, 0)
+      return
+    }
+
     const preservedSelection = { ...selection }
     const currentState = getFormattingState(activeTab.markdown, preservedSelection.start, preservedSelection.end)
     const selectedText = activeTab.markdown.slice(preservedSelection.start, preservedSelection.end)
-    linkSelectionRef.current = { ...preservedSelection, tabId: activeId, markdownSnapshot: activeTab.markdown }
-    if (mode === 'preview') setMode('live')
+    linkSelectionRef.current = { ...preservedSelection, editorKind: 'source', tabId: activeId, markdownSnapshot: activeTab.markdown }
     setLinkEditor({
       open: true,
       kind,
@@ -459,6 +527,10 @@ export default function App() {
 
   const closeLinkEditor = useCallback(() => {
     setLinkEditor((current) => ({ ...current, open: false }))
+    if (linkSelectionRef.current.editorKind === 'rich' && linkSelectionRef.current.tabId === activeId) {
+      window.setTimeout(() => richEditorRef.current?.focus?.(), 0)
+      return
+    }
     if (linkSelectionRef.current.tabId === activeId && linkSelectionRef.current.markdownSnapshot === activeTab.markdown) {
       const { start, end, direction = 'none' } = linkSelectionRef.current
       restoreEditorSelection({ start, end, direction })
@@ -466,7 +538,18 @@ export default function App() {
   }, [activeId, activeTab.markdown, restoreEditorSelection])
 
   const submitLinkEditor = useCallback(({ label, url }) => {
-    const { start, end, tabId, markdownSnapshot } = linkSelectionRef.current
+    const { start, end, tabId, markdownSnapshot, editorKind } = linkSelectionRef.current
+    if (editorKind === 'rich') {
+      if (tabId !== activeId || mode !== 'rich') {
+        setLinkEditor((current) => ({ ...current, open: false }))
+        setNotice('El documento cambió. Vuelve a abrir la herramienta de enlace.')
+        return
+      }
+      if (linkEditor.kind === 'image') richEditorRef.current?.insertImage?.({ alt: label, url })
+      else richEditorRef.current?.setLink?.({ label, url })
+      setLinkEditor((current) => ({ ...current, open: false }))
+      return
+    }
     if (tabId !== activeId || markdownSnapshot !== activeTab.markdown) {
       setLinkEditor((current) => ({ ...current, open: false }))
       setNotice('El texto cambió. Selecciónalo de nuevo para añadir el enlace.')
@@ -477,10 +560,15 @@ export default function App() {
       : setLink(activeTab.markdown, start, end, { label, url })
     setLinkEditor((current) => ({ ...current, open: false }))
     applyResult(result)
-  }, [activeId, activeTab.markdown, applyResult, linkEditor.kind])
+  }, [activeId, activeTab.markdown, applyResult, linkEditor.kind, mode])
 
   const removeCurrentLink = useCallback(() => {
-    const { start, end, tabId, markdownSnapshot } = linkSelectionRef.current
+    const { start, end, tabId, markdownSnapshot, editorKind } = linkSelectionRef.current
+    if (editorKind === 'rich') {
+      if (tabId === activeId && mode === 'rich') richEditorRef.current?.unsetLink?.()
+      setLinkEditor((current) => ({ ...current, open: false }))
+      return
+    }
     if (tabId !== activeId || markdownSnapshot !== activeTab.markdown) {
       setLinkEditor((current) => ({ ...current, open: false }))
       setNotice('El texto cambió. Selecciona de nuevo el enlace que quieres quitar.')
@@ -488,10 +576,24 @@ export default function App() {
     }
     setLinkEditor((current) => ({ ...current, open: false }))
     applyResult(removeLink(activeTab.markdown, start, end))
-  }, [activeId, activeTab.markdown, applyResult])
+  }, [activeId, activeTab.markdown, applyResult, mode])
 
   const applyFormat = useCallback((format) => {
-    if (mode === 'preview') setMode('live')
+    if (mode === 'rich') {
+      richEditorRef.current?.format?.(format)
+      return
+    }
+    if (mode === 'preview') {
+      const protectionNotice = richMarkdownNotice(activeTab.markdown)
+      if (protectionNotice) {
+        setMode('source')
+        setNotice(protectionNotice)
+        return
+      }
+      setMode('rich')
+      window.setTimeout(() => richEditorRef.current?.format?.(format), 0)
+      return
+    }
     const functions = {
       bold: toggleBold,
       italic: toggleItalic,
@@ -505,31 +607,150 @@ export default function App() {
   }, [activeTab.markdown, applyResult, mode, selection.end, selection.start])
 
   const applyHeading = useCallback((level) => {
-    if (mode === 'preview') setMode('live')
+    if (mode === 'rich') {
+      richEditorRef.current?.setHeading?.(level)
+      return
+    }
+    if (mode === 'preview') {
+      const protectionNotice = richMarkdownNotice(activeTab.markdown)
+      if (protectionNotice) {
+        setMode('source')
+        setNotice(protectionNotice)
+        return
+      }
+      setMode('rich')
+      window.setTimeout(() => richEditorRef.current?.setHeading?.(level), 0)
+      return
+    }
     applyResult(setHeading(activeTab.markdown, selection.start, selection.end, level))
   }, [activeTab.markdown, applyResult, mode, selection.end, selection.start])
 
   const applyAdvancedAction = useCallback((action) => {
+    setAdvancedOpen(false)
     if (action === 'image') {
       openLinkEditor('image')
       return
     }
+    if (mode === 'rich') {
+      if (action === 'table') {
+        setBuilder({ kind: 'table', spec: { columns: 3, bodyRows: 2, headers: ['Columna 1', 'Columna 2', 'Columna 3'] }, tabId: activeId, editorKind: 'rich' })
+        return
+      }
+      if (action === 'mermaid') {
+        setBuilder({ kind: 'mermaid', spec: getDefaultMermaidSpec('flowchart'), source: '', tabId: activeId, editorKind: 'rich', position: null })
+        return
+      }
+      if (action === 'footnote') {
+        const identifiers = [...activeTab.markdown.matchAll(/\[\^(\d+)\]/g)].map((match) => Number(match[1]))
+        const identifier = Math.max(0, ...identifiers) + 1
+        richEditorRef.current?.insertMarkdown?.(`[^${identifier}]\n\n[^${identifier}]: Nota al pie`)
+        return
+      }
+      richEditorRef.current?.format?.(action)
+      return
+    }
+    if (action === 'table') {
+      setBuilder({
+        kind: 'table',
+        spec: { columns: 3, bodyRows: 2, headers: ['Columna 1', 'Columna 2', 'Columna 3'] },
+        tabId: activeId,
+        editorKind: 'source',
+        markdownSnapshot: activeTab.markdown,
+        selection: { ...selection },
+      })
+      return
+    }
+    if (action === 'mermaid') {
+      setBuilder({
+        kind: 'mermaid',
+        spec: getDefaultMermaidSpec('flowchart'),
+        source: '',
+        tabId: activeId,
+        editorKind: 'source',
+        markdownSnapshot: activeTab.markdown,
+        selection: { ...selection },
+        position: null,
+      })
+      return
+    }
     const transforms = {
+      underline: toggleUnderline,
       strike: toggleStrikethrough,
-      table: insertTable,
       task: insertTask,
       codeblock: insertCodeBlock,
       rule: insertHorizontalRule,
       footnote: insertFootnote,
-      mermaid: insertMermaid,
     }
     const transform = transforms[action]
     if (!transform) return
-    if (mode === 'preview') setMode('live')
+    if (mode === 'preview') setMode('source')
     applyResult(transform(activeTab.markdown, selection.start, selection.end))
-  }, [activeTab.markdown, applyResult, mode, openLinkEditor, selection.end, selection.start])
+  }, [activeId, activeTab.markdown, applyResult, mode, openLinkEditor, selection])
 
-  const undo = useCallback(() => {
+  const updateBuilderSpec = useCallback((spec) => {
+    setBuilder((current) => current ? { ...current, spec } : current)
+  }, [])
+
+  const updateBuilderSource = useCallback((source) => {
+    setBuilder((current) => current ? { ...current, source } : current)
+  }, [])
+
+  const confirmTableBuilder = useCallback((spec, generatedMarkdown) => {
+    if (!builder || builder.kind !== 'table' || builder.tabId !== activeId) {
+      setBuilder(null)
+      setNotice('El documento cambió. Abre de nuevo el creador de tablas.')
+      return
+    }
+    if (builder.editorKind === 'rich') {
+      richEditorRef.current?.insertMarkdown?.(generatedMarkdown)
+      setBuilder(null)
+      return
+    }
+    if (builder.markdownSnapshot !== activeTab.markdown) {
+      setBuilder(null)
+      setNotice('El texto cambió. Abre de nuevo el creador de tablas.')
+      return
+    }
+    const { start, end } = builder.selection
+    setBuilder(null)
+    applyResult(insertConfiguredTable(activeTab.markdown, start, end, spec))
+  }, [activeId, activeTab.markdown, applyResult, builder])
+
+  const confirmMermaidBuilder = useCallback((spec, source) => {
+    if (!builder || builder.kind !== 'mermaid' || builder.tabId !== activeId) {
+      setBuilder(null)
+      setNotice('El documento cambió. Abre de nuevo el creador de diagramas.')
+      return
+    }
+    if (builder.editorKind === 'rich') {
+      richEditorRef.current?.setMermaid?.(source, builder.position)
+      setBuilder(null)
+      return
+    }
+    if (builder.markdownSnapshot !== activeTab.markdown) {
+      setBuilder(null)
+      setNotice('El texto cambió. Abre de nuevo el creador de diagramas.')
+      return
+    }
+    const { start, end } = builder.selection
+    setBuilder(null)
+    applyResult(insertConfiguredMermaid(activeTab.markdown, start, end, source))
+  }, [activeId, activeTab.markdown, applyResult, builder])
+
+  const editRichMermaid = useCallback(({ position, source }) => {
+    setAdvancedOpen(false)
+    setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+    setBuilder({
+      kind: 'mermaid',
+      spec: getDefaultMermaidSpec('flowchart'),
+      source: String(source ?? ''),
+      tabId: activeId,
+      editorKind: 'rich',
+      position,
+    })
+  }, [activeId])
+
+  const undoSource = useCallback(() => {
     const history = ensureHistoryAccounting(historyRef.current.get(activeId))
     const previous = history?.past.pop()
     if (previous === undefined) return
@@ -542,7 +763,7 @@ export default function App() {
     setWorkspace(editTab(workspace, activeId, previous))
   }, [activeId, activeTab.markdown, workspace])
 
-  const redo = useCallback(() => {
+  const redoSource = useCallback(() => {
     const history = ensureHistoryAccounting(historyRef.current.get(activeId))
     const next = history?.future.shift()
     if (next === undefined) return
@@ -554,6 +775,22 @@ export default function App() {
     history.lastChangeWasTyping = false
     setWorkspace(editTab(workspace, activeId, next))
   }, [activeId, activeTab.markdown, workspace])
+
+  const undo = useCallback(() => {
+    if (mode === 'rich') {
+      richEditorRef.current?.undo?.()
+      return
+    }
+    undoSource()
+  }, [mode, undoSource])
+
+  const redo = useCallback(() => {
+    if (mode === 'rich') {
+      richEditorRef.current?.redo?.()
+      return
+    }
+    redoSource()
+  }, [mode, redoSource])
 
   const updateCursor = useCallback((textarea) => {
     const beforeCursor = textarea.value.slice(0, textarea.selectionStart)
@@ -606,7 +843,7 @@ export default function App() {
     const targetLine = Math.max(1, line)
     const lines = activeTab.markdown.split('\n')
     const start = lines.slice(0, targetLine - 1).reduce((total, value) => total + value.length + 1, 0)
-    if (mode === 'preview') setMode('live')
+    if (mode !== 'source' && mode !== 'split') setMode('source')
     const nextSelection = { start, end: start, direction: 'none' }
     restoreEditorSelection(nextSelection)
     window.setTimeout(() => textareaRef.current?.scrollToLine?.(targetLine), 0)
@@ -614,29 +851,42 @@ export default function App() {
 
   const toggleFocusMode = useCallback(() => {
     if (!focusMode) {
-      setMode('live')
+      const protectionNotice = richMarkdownNotice(activeTab.markdown)
+      if (protectionNotice) {
+        setMode('source')
+        setNotice(protectionNotice)
+        return
+      }
+      setMode('rich')
       setFocusMode(true)
       return
     }
     setFocusMode(false)
-  }, [focusMode])
+  }, [activeTab.markdown, focusMode])
 
   useEffect(() => {
     const onKeyDown = (event) => {
       if (event.defaultPrevented) return
       const command = event.metaKey || event.ctrlKey
-      const targetIsInput = event.target instanceof Element && Boolean(event.target.closest('input, textarea, select'))
-      const editorHasFocus = textareaRef.current?.hasFocus?.() ?? document.activeElement === textareaRef.current
+      const targetIsInput = event.target instanceof Element && Boolean(event.target.closest('input, textarea, select, [contenteditable="true"]'))
+      const editorHasFocus = Boolean(
+        richEditorRef.current?.hasFocus?.()
+        || textareaRef.current?.hasFocus?.()
+        || document.activeElement === textareaRef.current,
+      )
       if (event.key === 'Escape') {
         setCommandOpen(false)
         setConfirmation(null)
         setPendingFiles([])
         setRenameOpen(false)
         setLinkEditor((current) => ({ ...current, open: false }))
+        setAdvancedOpen(false)
+        setBuilder(null)
+        setGuideOpen(false)
         setDropActive(false)
         return
       }
-      const dialogOpen = Boolean(confirmation || pendingFiles.length || renameOpen || linkEditor.open || guideOpen || commandOpen)
+      const dialogOpen = Boolean(confirmation || pendingFiles.length || renameOpen || linkEditor.open || guideOpen || commandOpen || builder)
       if (dialogOpen) return
       if (event.key === 'F2' && !command) {
         if (targetIsInput) return
@@ -656,10 +906,10 @@ export default function App() {
       }
       if (key === 'w' && !event.shiftKey) { event.preventDefault(); requestClose(activeId) }
       if (key === 's' && !event.shiftKey) { event.preventDefault(); exportMarkdown() }
-      if (key === 'l' && event.shiftKey) { event.preventDefault(); setMode('live') }
-      if (key === 'e' && event.shiftKey) { event.preventDefault(); setMode('source') }
-      if (key === 'd' && event.shiftKey) { event.preventDefault(); setMode('split') }
-      if (key === 'p' && event.altKey) { event.preventDefault(); setMode('preview') }
+      if (key === 'l' && event.shiftKey) { event.preventDefault(); changeMode('rich') }
+      if (key === 'e' && event.shiftKey) { event.preventDefault(); changeMode('source') }
+      if (key === 'd' && event.shiftKey) { event.preventDefault(); changeMode('split') }
+      if (key === 'p' && event.altKey) { event.preventDefault(); changeMode('preview') }
       if (key === 'o' && event.shiftKey) { event.preventDefault(); setOutlineCollapsed((current) => !current) }
       if (key === 'f' && event.shiftKey) { event.preventDefault(); toggleFocusMode() }
       if (key === '/') { event.preventDefault(); setGuideOpen(true) }
@@ -672,12 +922,21 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [activateDocument, activeId, commandOpen, confirmation, createDocument, exportMarkdown, guideOpen, linkEditor.open, openFilePicker, openLinkEditor, openRename, pendingFiles.length, redo, renameOpen, requestClose, toggleFocusMode, undo, workspace.tabs])
+  }, [activateDocument, activeId, builder, changeMode, commandOpen, confirmation, createDocument, exportMarkdown, guideOpen, linkEditor.open, openFilePicker, openLinkEditor, openRename, pendingFiles.length, redo, renameOpen, requestClose, toggleFocusMode, undo, workspace.tabs])
 
-  const formatState = useMemo(() => {
+  const sourceFormatState = useMemo(() => {
     const state = getFormattingState(activeTab.markdown, selection.start, selection.end)
     return { ...state, headingLevel: state.heading }
   }, [activeTab.markdown, selection.end, selection.start])
+
+  const formatState = mode === 'rich' ? richFormatState : sourceFormatState
+
+  const restoreActiveEditorFocus = useCallback(() => {
+    window.setTimeout(() => {
+      if (mode === 'rich') richEditorRef.current?.focus?.()
+      else textareaRef.current?.focus?.()
+    }, 0)
+  }, [mode])
 
   const wordCount = useMemo(() => {
     const plainText = activeTab.markdown.replace(/[#>*_`\-[\]()~]/g, ' ').trim()
@@ -700,10 +959,10 @@ export default function App() {
     { id: 'mermaid', label: 'Insertar diagrama Mermaid', keywords: 'gráfico flujo avanzado', action: () => applyAdvancedAction('mermaid') },
     { id: 'codeblock', label: 'Insertar bloque de código', keywords: 'fence avanzado', action: () => applyAdvancedAction('codeblock') },
     { id: 'outline', label: outlineCollapsed ? 'Mostrar estructura' : 'Ocultar estructura', shortcut: '⌘⇧O', action: () => setOutlineCollapsed((current) => !current) },
-    { id: 'live', label: 'Cambiar a edición Live', shortcut: '⌘⇧L', keywords: 'wysiwym bear', action: () => setMode('live') },
-    { id: 'source', label: 'Cambiar a código fuente', shortcut: '⌘⇧E', keywords: 'markdown crudo', action: () => setMode('source') },
-    { id: 'split', label: 'Cambiar a vista dividida', shortcut: '⌘⇧D', action: () => setMode('split') },
-    { id: 'preview', label: 'Cambiar a Vista previa', shortcut: '⌘⌥P', action: () => setMode('preview') },
+    { id: 'rich', label: 'Cambiar a edición enriquecida', shortcut: '⌘⇧L', keywords: 'wysiwyg documento word', action: () => changeMode('rich') },
+    { id: 'source', label: 'Cambiar a Markdown', shortcut: '⌘⇧E', keywords: 'fuente código crudo', action: () => changeMode('source') },
+    { id: 'split', label: 'Comparar Markdown y lectura', shortcut: '⌘⇧D', action: () => changeMode('split') },
+    { id: 'preview', label: 'Cambiar a lectura', shortcut: '⌘⌥P', action: () => changeMode('preview') },
     { id: 'focus', label: focusMode ? 'Salir del modo concentración' : 'Entrar en modo concentración', shortcut: '⌘⇧F', action: toggleFocusMode },
     { id: 'guide', label: 'Abrir guía rápida', shortcut: '⌘/', action: () => setGuideOpen(true) },
   ]
@@ -743,7 +1002,7 @@ export default function App() {
         filename={activeTab.filename}
         mode={mode}
         saveState={saveState}
-        onModeChange={setMode}
+        onModeChange={changeMode}
         onNew={createDocument}
         onOpen={openFilePicker}
         onDownload={exportMarkdown}
@@ -769,12 +1028,18 @@ export default function App() {
           onClose: closeLinkEditor,
         }}
         onAdvancedAction={applyAdvancedAction}
+        advancedOpen={advancedOpen}
+        onAdvancedOpenChange={(open) => {
+          setAdvancedOpen(open)
+          if (open) setLinkEditor((current) => current.open ? { ...current, open: false } : current)
+        }}
       />
       <input ref={fileInputRef} hidden tabIndex="-1" aria-hidden="true" type="file" multiple accept=".md,.markdown,.txt,text/markdown,text/plain" onChange={handleFileInput} />
       <Workspace
+        documentId={activeId}
         markdown={activeTab.markdown}
         mode={mode}
-        onModeChange={setMode}
+        onModeChange={changeMode}
         onMarkdownChange={updateMarkdown}
         onCursorChange={updateCursor}
         onSelectionChange={updateSelection}
@@ -782,11 +1047,14 @@ export default function App() {
         onUndo={undo}
         onRedo={redo}
         textareaRef={textareaRef}
+        richEditorRef={richEditorRef}
+        onRichFormatStateChange={setRichFormatState}
+        onEditMermaid={editRichMermaid}
         outlineCollapsed={outlineCollapsed}
         onToggleOutline={() => setOutlineCollapsed((current) => !current)}
         onNavigate={navigateToLine}
       />
-      <StatusBar words={wordCount} cursor={cursor} dirty={activeTab.dirty} saveState={saveState} />
+      <StatusBar words={wordCount} cursor={cursor} mode={mode} dirty={activeTab.dirty} saveState={saveState} />
       <QuickGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
       <DropOverlay visible={dropActive} />
       {focusMode ? (
@@ -807,6 +1075,27 @@ export default function App() {
         />
       ) : null}
       {renameOpen ? <RenameDialog value={renameValue} onChange={setRenameValue} onConfirm={confirmRename} onCancel={() => setRenameOpen(false)} /> : null}
+      {builder?.kind === 'table' ? (
+        <TableBuilderDialog
+          spec={builder.spec}
+          onChange={updateBuilderSpec}
+          onConfirm={confirmTableBuilder}
+          onCancel={() => setBuilder(null)}
+          onRestoreFocus={restoreActiveEditorFocus}
+        />
+      ) : null}
+      {builder?.kind === 'mermaid' ? (
+        <MermaidBuilderDialog
+          spec={builder.spec}
+          source={builder.source}
+          editing={Number.isInteger(builder.position)}
+          onChange={updateBuilderSpec}
+          onSourceChange={updateBuilderSource}
+          onConfirm={confirmMermaidBuilder}
+          onCancel={() => setBuilder(null)}
+          onRestoreFocus={restoreActiveEditorFocus}
+        />
+      ) : null}
       <CommandPalette open={commandOpen} commands={commands} onClose={() => setCommandOpen(false)} />
       {notice ? <div className="notice" role="status">{notice}</div> : null}
     </div>

@@ -2,8 +2,27 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import LiveEditorPane from './LiveEditorPane.jsx'
 import OutlinePane from './OutlinePane.jsx'
 import PreviewPane from './PreviewPane.jsx'
+import RichEditorPane from './RichEditorPane.jsx'
 
-export default function Workspace({ markdown, mode, onModeChange, onMarkdownChange, onCursorChange, onSelectionChange, onEditorKeyDown, onUndo, onRedo, textareaRef, outlineCollapsed, onToggleOutline, onNavigate }) {
+export default function Workspace({
+  documentId,
+  markdown,
+  mode,
+  onModeChange,
+  onMarkdownChange,
+  onCursorChange,
+  onSelectionChange,
+  onEditorKeyDown,
+  onUndo,
+  onRedo,
+  textareaRef,
+  richEditorRef,
+  onRichFormatStateChange,
+  onEditMermaid,
+  outlineCollapsed,
+  onToggleOutline,
+  onNavigate,
+}) {
   const workspaceRef = useRef(null)
   const draggingRef = useRef(false)
   const [split, setSplit] = useState(50)
@@ -32,7 +51,7 @@ export default function Workspace({ markdown, mode, onModeChange, onMarkdownChan
   }, [handlePointerMove, stopDragging])
 
   useEffect(() => {
-    if (mode !== 'preview') textareaRef.current?.requestMeasure?.()
+    if (mode === 'source' || mode === 'split') textareaRef.current?.requestMeasure?.()
   }, [mode, textareaRef])
 
   const startDragging = (event) => {
@@ -59,21 +78,32 @@ export default function Workspace({ markdown, mode, onModeChange, onMarkdownChan
         style={{ '--editor-width': `${split}%` }}
       >
         <div className="mobile-view-switch" role="group" aria-label="Vista del documento">
-          <button type="button" className={mode === 'live' || mode === 'split' ? 'is-active' : ''} aria-pressed={mode === 'live' || mode === 'split'} onClick={() => onModeChange('live')}>Live</button>
-          <button type="button" className={mode === 'source' ? 'is-active' : ''} aria-pressed={mode === 'source'} onClick={() => onModeChange('source')}>Fuente</button>
-          <button type="button" className={mode === 'preview' ? 'is-active' : ''} aria-pressed={mode === 'preview'} onClick={() => onModeChange('preview')}>Vista previa</button>
+          <button type="button" className={mode === 'rich' ? 'is-active' : ''} aria-pressed={mode === 'rich'} onClick={() => onModeChange('rich')}>Enriquecido</button>
+          <button type="button" className={mode === 'source' || mode === 'split' ? 'is-active' : ''} aria-pressed={mode === 'source' || mode === 'split'} onClick={() => onModeChange('source')}>Markdown</button>
+          <button type="button" className={mode === 'preview' ? 'is-active' : ''} aria-pressed={mode === 'preview'} onClick={() => onModeChange('preview')}>Lectura</button>
         </div>
-        <LiveEditorPane
-          markdown={markdown}
-          variant={mode === 'source' ? 'source' : 'live'}
-          onChange={onMarkdownChange}
-          onCursorChange={onCursorChange}
-          onSelectionChange={onSelectionChange}
-          onKeyDown={onEditorKeyDown}
-          onUndo={onUndo}
-          onRedo={onRedo}
-          textareaRef={textareaRef}
-        />
+        {mode === 'rich' ? (
+          <RichEditorPane
+            key={documentId}
+            ref={richEditorRef}
+            markdown={markdown}
+            onChange={onMarkdownChange}
+            onFormatStateChange={onRichFormatStateChange}
+            onEditMermaid={onEditMermaid}
+          />
+        ) : null}
+        {mode === 'source' || mode === 'split' ? (
+          <LiveEditorPane
+            markdown={markdown}
+            onChange={onMarkdownChange}
+            onCursorChange={onCursorChange}
+            onSelectionChange={onSelectionChange}
+            onKeyDown={onEditorKeyDown}
+            onUndo={onUndo}
+            onRedo={onRedo}
+            textareaRef={textareaRef}
+          />
+        ) : null}
         {mode === 'split' ? (
           <div
             className="splitter"
@@ -89,7 +119,7 @@ export default function Workspace({ markdown, mode, onModeChange, onMarkdownChan
             onKeyDown={resizeWithKeyboard}
           ><span aria-hidden="true">••<br />••</span></div>
         ) : null}
-        {mode === 'split' || mode === 'preview' ? <PreviewPane markdown={markdown} onNavigate={onNavigate} /> : null}
+        {mode === 'split' || mode === 'preview' ? <PreviewPane markdown={markdown} /> : null}
       </main>
     </div>
   )

@@ -7,11 +7,11 @@ test('renderiza párrafos continuos como un único bloque', () => {
 })
 
 test('renderiza formato inline de Markdown sin habilitar HTML crudo', () => {
-  const html = renderMarkdown('**fuerte**, _énfasis_, ~~tachado~~ y `código`')
+  const html = renderMarkdown('**fuerte**, _énfasis_, ~~tachado~~, ++subrayado++ y `código`')
 
   assert.equal(
     html,
-    '<p><strong>fuerte</strong>, <em>énfasis</em>, <s>tachado</s> y <code>código</code></p>',
+    '<p><strong>fuerte</strong>, <em>énfasis</em>, <s>tachado</s>, <u>subrayado</u> y <code>código</code></p>',
   )
 })
 

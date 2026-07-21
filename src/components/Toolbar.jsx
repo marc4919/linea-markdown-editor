@@ -12,10 +12,10 @@ import {
 } from './Icons.jsx'
 
 const modes = [
-  { id: 'live', label: 'Live', icon: LiveIcon },
-  { id: 'source', label: 'Fuente', icon: CodeIcon },
-  { id: 'split', label: 'Dividir', icon: SplitIcon },
-  { id: 'preview', label: 'Vista previa', icon: PreviewIcon },
+  { id: 'rich', label: 'Edición enriquecida', icon: LiveIcon },
+  { id: 'source', label: 'Markdown', icon: CodeIcon },
+  { id: 'split', label: 'Comparar', icon: SplitIcon },
+  { id: 'preview', label: 'Lectura', icon: PreviewIcon },
 ]
 
 export default function Toolbar({ filename, mode, saveState, onModeChange, onNew, onOpen, onDownload, onExportHtml, onCommand, onRename }) {

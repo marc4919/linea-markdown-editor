@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import {
   CodeIcon,
   DiagramIcon,
@@ -9,12 +9,14 @@ import {
   StrikeIcon,
   TableIcon,
   TaskIcon,
+  UnderlineIcon,
 } from './Icons.jsx'
 
 const groups = [
   {
     label: 'Formato',
     actions: [
+      { id: 'underline', label: 'Subrayado', icon: UnderlineIcon },
       { id: 'strike', label: 'Tachado', icon: StrikeIcon },
       { id: 'task', label: 'Lista de tareas', icon: TaskIcon },
       { id: 'codeblock', label: 'Bloque de código', icon: CodeIcon },
@@ -32,21 +34,76 @@ const groups = [
   },
 ]
 
-export default function AdvancedMenu({ disabled, onAction }) {
+export default function AdvancedMenu({ disabled, disabledActions = [], open, onOpenChange, onAction }) {
   const detailsRef = useRef(null)
+  const summaryRef = useRef(null)
+  const popoverId = useId()
+  const [internalOpen, setInternalOpen] = useState(false)
+  const controlled = open !== undefined
+  const requestedOpen = controlled ? Boolean(open) : internalOpen
+  const menuOpen = !disabled && requestedOpen
+
+  const setOpen = useCallback((nextOpen) => {
+    const next = Boolean(nextOpen)
+    if (!controlled) setInternalOpen(next)
+    onOpenChange?.(next)
+  }, [controlled, onOpenChange])
+
+  useEffect(() => {
+    if (disabled && requestedOpen) setOpen(false)
+  }, [disabled, requestedOpen, setOpen])
+
+  useEffect(() => {
+    if (!menuOpen) return undefined
+
+    const closeFromOutside = (event) => {
+      if (!detailsRef.current?.contains(event.target)) setOpen(false)
+    }
+    const closeWithEscape = (event) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopPropagation()
+      setOpen(false)
+      summaryRef.current?.focus()
+    }
+
+    document.addEventListener('pointerdown', closeFromOutside)
+    document.addEventListener('focusin', closeFromOutside)
+    document.addEventListener('keydown', closeWithEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeFromOutside)
+      document.removeEventListener('focusin', closeFromOutside)
+      document.removeEventListener('keydown', closeWithEscape)
+    }
+  }, [menuOpen, setOpen])
 
   const run = (id) => {
-    detailsRef.current?.removeAttribute('open')
-    onAction(id)
+    setOpen(false)
+    onAction?.(id)
   }
 
   return (
-    <details ref={detailsRef} className={`advanced-menu${disabled ? ' is-disabled' : ''}`}>
-      <summary aria-label="Más opciones de Markdown" aria-disabled={disabled || undefined} onClick={(event) => { if (disabled) event.preventDefault() }}>
+    <details
+      ref={detailsRef}
+      className={`advanced-menu${disabled ? ' is-disabled' : ''}`}
+      open={menuOpen}
+      onToggle={(event) => {
+        const nextOpen = event.currentTarget.open
+        if (nextOpen !== menuOpen) setOpen(nextOpen)
+      }}
+    >
+      <summary
+        ref={summaryRef}
+        aria-label="Más opciones de Markdown"
+        aria-controls={popoverId}
+        aria-expanded={menuOpen}
+        aria-disabled={disabled || undefined}
+        onClick={(event) => { if (disabled) event.preventDefault() }}
+      >
         <MoreIcon />
         <span>Más</span>
       </summary>
-      <div className="advanced-menu-popover">
+      <div className="advanced-menu-popover" id={popoverId}>
         <header>
           <strong>Más opciones</strong>
           <small>Markdown avanzado sin llenar la barra</small>
@@ -55,7 +112,7 @@ export default function AdvancedMenu({ disabled, onAction }) {
           <section key={group.label} aria-label={group.label}>
             <span>{group.label}</span>
             {group.actions.map(({ id, label, icon: ActionIcon }) => (
-              <button key={id} type="button" onClick={() => run(id)}>
+              <button key={id} type="button" disabled={disabledActions.includes(id)} onClick={() => run(id)}>
                 <ActionIcon />
                 {label}
               </button>

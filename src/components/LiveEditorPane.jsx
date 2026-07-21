@@ -16,7 +16,6 @@ import {
   lineNumbers,
   rectangularSelection,
 } from '@codemirror/view'
-import { liveMarkdownExtensions, updateLiveMarkdownVariant } from '../lib/liveMarkdown.js'
 
 const externalDocumentUpdate = Annotation.define()
 const editorSetup = [
@@ -124,13 +123,7 @@ function createEditorHandle(viewRef, markdownRef) {
   }
 }
 
-/**
- * A controlled CodeMirror editor with a Bear-like Live mode.
- *
- * `textareaRef` intentionally exposes the textarea-compatible subset used by
- * Línea, plus `hasFocus()` and `scrollToLine()`, while the editor itself keeps
- * CodeMirror's native selection and history model.
- */
+/** A controlled CodeMirror editor that always exposes the Markdown source. */
 export default function LiveEditorPane({
   markdown: markdownValue,
   onChange,
@@ -140,7 +133,6 @@ export default function LiveEditorPane({
   onUndo,
   onRedo,
   textareaRef,
-  variant = 'live',
 }) {
   const headingId = useId()
   const hostRef = useRef(null)
@@ -188,7 +180,6 @@ export default function LiveEditorPane({
           autocapitalize: 'sentences',
           spellcheck: 'true',
         }),
-        ...liveMarkdownExtensions(variant),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const isExternal = update.transactions.some((transaction) => (
@@ -209,12 +200,6 @@ export default function LiveEditorPane({
       view.destroy()
     }
   }, [editorHandle])
-
-  useLayoutEffect(() => {
-    const view = viewRef.current
-    if (!view) return
-    updateLiveMarkdownVariant(view, variant)
-  }, [variant])
 
   useLayoutEffect(() => {
     const view = viewRef.current
@@ -243,11 +228,11 @@ export default function LiveEditorPane({
     <section
       className="pane editor-pane live-editor-pane"
       aria-labelledby={headingId}
-      data-editor-variant={variant === 'source' ? 'source' : 'live'}
+      data-editor-variant="source"
     >
       <div className="pane-heading" id={headingId}>
-        <span>{variant === 'source' ? 'Fuente Markdown' : 'Edición Live'}</span>
-        <small>{variant === 'source' ? 'Sintaxis completa visible' : 'El formato aparece mientras escribes'}</small>
+        <span>Markdown</span>
+        <small>Sintaxis completa visible</small>
       </div>
       <div ref={hostRef} className="live-editor-host" style={EDITOR_HOST_STYLE} />
     </section>
