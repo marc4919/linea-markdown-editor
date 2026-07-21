@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CommandPalette from './components/CommandPalette.jsx'
-import TemplateDialog from './components/TemplateDialog.jsx'
 import { ConfirmDialog, ImportDialog, RenameDialog } from './components/Dialog.jsx'
 import DocumentTabs from './components/DocumentTabs.jsx'
 import DropOverlay from './components/DropOverlay.jsx'
@@ -11,7 +10,7 @@ import TableBuilderDialog from './components/TableBuilderDialog.jsx'
 import Toolbar from './components/Toolbar.jsx'
 import Workspace from './components/Workspace.jsx'
 import MermaidBuilderDialog from './components/MermaidBuilderDialog.jsx'
-import { DOCUMENT_TEMPLATES, STARTER_MARKDOWN } from './data.js'
+import { STARTER_MARKDOWN } from './data.js'
 import {
   getFormattingState,
   removeLink,
@@ -154,7 +153,6 @@ export default function App() {
   const [commandOpen, setCommandOpen] = useState(false)
   const [focusMode, setFocusMode] = useState(null)
   const [fontFamily, setFontFamily] = useState(() => window.localStorage.getItem(FONT_STORAGE_KEY) === 'sans' ? 'sans' : 'serif')
-  const [templateOpen, setTemplateOpen] = useState(false)
   const [dropActive, setDropActive] = useState(false)
   const [pendingFiles, setPendingFiles] = useState([])
   const [confirmation, setConfirmation] = useState(null)
@@ -298,20 +296,17 @@ export default function App() {
     }, 0)
   }, [activeId, selection])
 
-  const createDocument = useCallback((template = DOCUMENT_TEMPLATES[0]) => {
+  const createDocument = useCallback(() => {
     selectionsRef.current.set(activeId, selection)
     setWorkspace((current) => createTab(current, {
-      filename: getNextUntitledFilename(current, template.filename),
-      markdown: template.markdown,
-      dirty: template.markdown !== '',
+      filename: getNextUntitledFilename(current, 'sin-titulo.md'),
+      markdown: '',
+      dirty: false,
       exported: false,
     }))
     setSelection(EMPTY_SELECTION)
-    setTemplateOpen(false)
     window.setTimeout(() => (richEditorRef.current || textareaRef.current)?.focus?.(), 0)
   }, [activeId, selection])
-
-  const openTemplates = useCallback(() => setTemplateOpen(true), [])
 
   const changeFontFamily = useCallback((nextFamily) => {
     const normalized = nextFamily === 'sans' ? 'sans' : 'serif'
@@ -923,13 +918,12 @@ export default function App() {
         setAdvancedOpen(false)
         setBuilder(null)
         setGuideOpen(false)
-        setTemplateOpen(false)
         setDropActive(false)
         setMobileOutlineOpen(false)
         setFocusMode(null)
         return
       }
-      const dialogOpen = Boolean(confirmation || pendingFiles.length || renameOpen || linkEditor.open || footnoteEditor.open || guideOpen || commandOpen || builder || templateOpen)
+      const dialogOpen = Boolean(confirmation || pendingFiles.length || renameOpen || linkEditor.open || footnoteEditor.open || guideOpen || commandOpen || builder)
       if (dialogOpen) return
       if (event.key === 'F2' && !command) {
         if (targetIsInput) return
@@ -942,7 +936,7 @@ export default function App() {
       if (targetIsInput && !editorHasFocus) return
       if (key === 'p' && event.shiftKey) { event.preventDefault(); setCommandOpen(true) }
       if (key === 'k' && !event.shiftKey && (!targetIsInput || editorHasFocus)) { event.preventDefault(); openLinkEditor('link') }
-      if (key === 't' && !event.shiftKey) { event.preventDefault(); createDocument(DOCUMENT_TEMPLATES[0]) }
+      if (key === 't' && !event.shiftKey) { event.preventDefault(); createDocument() }
       if (key === 'o' && !event.shiftKey) {
         event.preventDefault()
         openFilePicker()
@@ -964,7 +958,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [activateDocument, activeId, builder, changeMode, commandOpen, confirmation, createDocument, exportMarkdown, focusMode, footnoteEditor.open, guideOpen, linkEditor.open, openFilePicker, openLinkEditor, openRename, pendingFiles.length, redo, renameOpen, requestClose, templateOpen, toggleFocusMode, toggleOutline, undo, workspace.tabs])
+  }, [activateDocument, activeId, builder, changeMode, commandOpen, confirmation, createDocument, exportMarkdown, focusMode, footnoteEditor.open, guideOpen, linkEditor.open, openFilePicker, openLinkEditor, openRename, pendingFiles.length, redo, renameOpen, requestClose, toggleFocusMode, toggleOutline, undo, workspace.tabs])
 
   const sourceFormatState = useMemo(() => {
     const state = getFormattingState(activeTab.markdown, selection.start, selection.end)
@@ -983,8 +977,7 @@ export default function App() {
   const documentStats = useMemo(() => getDocumentStats(activeTab.markdown), [activeTab.markdown])
 
   const commands = [
-    { id: 'new', label: 'Nuevo documento vacío', shortcut: '⌘T', keywords: 'crear archivo', action: () => createDocument(DOCUMENT_TEMPLATES[0]) },
-    { id: 'templates', label: 'Nuevo desde plantilla', keywords: 'crear reunión artículo diario tareas readme propuesta', action: openTemplates },
+    { id: 'new', label: 'Nuevo documento vacío', shortcut: '⌘T', keywords: 'crear archivo', action: createDocument },
     { id: 'open', label: 'Abrir archivos', shortcut: '⌘O', keywords: 'importar cargar', action: openFilePicker },
     { id: 'rename', label: 'Renombrar documento', shortcut: 'F2', keywords: 'nombre título', action: openRename },
     { id: 'export', label: 'Exportar Markdown', shortcut: '⌘S', keywords: 'guardar descargar', action: exportMarkdown },
@@ -1055,7 +1048,7 @@ export default function App() {
         onFontChange={changeFontFamily}
         onEnterFocusMode={toggleFocusMode}
       />
-      <DocumentTabs documents={workspace.tabs} activeId={activeId} onActivate={activateDocument} onClose={requestClose} onNew={openTemplates} onRename={openRename} />
+      <DocumentTabs documents={workspace.tabs} activeId={activeId} onActivate={activateDocument} onClose={requestClose} onNew={createDocument} onRename={openRename} />
       <FormattingToolbar
         onFormat={applyFormat}
         onHeading={applyHeading}
@@ -1118,7 +1111,6 @@ export default function App() {
           Salir de concentración
         </button>
       ) : null}
-      {templateOpen ? <TemplateDialog templates={DOCUMENT_TEMPLATES} onSelect={createDocument} onCancel={() => setTemplateOpen(false)} /> : null}
       {!confirmation ? <ImportDialog files={pendingFiles} dirty={needsDiscardConfirmation(activeTab)} onNewTabs={importInNewTabs} onReplace={requestReplace} onCancel={() => setPendingFiles([])} /> : null}
       {confirmation ? (
         <ConfirmDialog
