@@ -20,12 +20,12 @@
 ## En movimiento
 
 <p align="center">
-  <video src="https://github.com/marc4919/linea-markdown-editor/raw/refs/heads/main/public/linea-demo.mp4" width="100%" autoplay muted loop playsinline controls>
-    Tu navegador no puede reproducir el vídeo. <a href="https://github.com/marc4919/linea-markdown-editor/raw/refs/heads/main/public/linea-demo.mp4">Ver la demo</a>.
-  </video>
+  <a href="https://github.com/marc4919/linea-markdown-editor/raw/refs/heads/main/public/linea-demo.mp4">
+    <img src="public/linea-demo.gif" alt="Demostración animada de Línea: escritura, tablas y vista comparada" width="100%" />
+  </a>
 </p>
 
-> El vídeo se reproduce sin sonido al abrir el README. Si GitHub o tu navegador bloquea la reproducción automática, puedes iniciarlo con los controles.
+> La demostración se reproduce automáticamente y en bucle dentro de GitHub. Haz clic para abrir el vídeo completo en alta resolución.
 
 ## Un editor que deja espacio a las ideas
 
