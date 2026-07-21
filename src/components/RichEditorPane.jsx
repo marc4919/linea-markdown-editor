@@ -13,6 +13,7 @@ import {
   insertRichMarkdownPreservingSelection,
   insertRichNodePreservingSelection,
   isRichSelectionInsideTable,
+  normalizeRichInlineSelection,
   setRichLink,
 } from '../lib/richEditorCommands.js'
 import { richCoreExtensions } from '../lib/richCoreExtensions.js'
@@ -145,7 +146,10 @@ const RichEditorPane = forwardRef(function RichEditorPane({
       const insideTable = isRichSelectionInsideTable(editor)
       if (insideTable && ['list', 'task', 'quote', 'codeblock', 'rule'].includes(id)) return false
       if (id === 'rule') return insertRichHorizontalRule(editor)
+      const inlineFormat = ['bold', 'italic', 'underline', 'strike', 'code'].includes(id)
+      const inlineSelection = inlineFormat ? normalizeRichInlineSelection(editor) : null
       const chain = editor.chain().focus()
+      if (inlineSelection && inlineSelection.from !== inlineSelection.to) chain.setTextSelection(inlineSelection)
       const commands = {
         bold: () => chain.toggleBold().run(),
         italic: () => chain.toggleItalic().run(),
@@ -158,6 +162,18 @@ const RichEditorPane = forwardRef(function RichEditorPane({
         codeblock: () => chain.toggleCodeBlock().run(),
       }
       return commands[id]?.() ?? false
+    },
+    navigateToHeading(index) {
+      if (!editor || !Number.isInteger(index) || index < 0) return false
+      let headingIndex = 0
+      let targetPosition = null
+      editor.state.doc.descendants((node, position) => {
+        if (targetPosition !== null || node.type.name !== 'heading') return
+        if (headingIndex === index) targetPosition = position + 1
+        headingIndex += 1
+      })
+      if (targetPosition === null) return false
+      return editor.chain().focus().setTextSelection(targetPosition).scrollIntoView().run()
     },
     setHeading(level) {
       if (!editor) return false

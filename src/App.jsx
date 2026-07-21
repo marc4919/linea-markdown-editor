@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CommandPalette from './components/CommandPalette.jsx'
+import TemplateDialog from './components/TemplateDialog.jsx'
 import { ConfirmDialog, ImportDialog, RenameDialog } from './components/Dialog.jsx'
 import DocumentTabs from './components/DocumentTabs.jsx'
 import DropOverlay from './components/DropOverlay.jsx'
@@ -10,7 +11,7 @@ import TableBuilderDialog from './components/TableBuilderDialog.jsx'
 import Toolbar from './components/Toolbar.jsx'
 import Workspace from './components/Workspace.jsx'
 import MermaidBuilderDialog from './components/MermaidBuilderDialog.jsx'
-import { STARTER_MARKDOWN } from './data.js'
+import { DOCUMENT_TEMPLATES, STARTER_MARKDOWN } from './data.js'
 import {
   getFormattingState,
   removeLink,
@@ -48,6 +49,7 @@ import {
   createWorkspace,
   editTab,
   getActiveTab,
+  getNextUntitledFilename,
   getTab,
   markTabExported,
   needsDiscardConfirmation,
@@ -62,6 +64,7 @@ const MAX_HISTORY_ENTRIES = 100
 const MAX_HISTORY_BYTES = 12 * 1024 * 1024
 const HISTORY_GROUP_WINDOW = 650
 const EMPTY_SELECTION = { start: 0, end: 0, direction: 'none' }
+const FONT_STORAGE_KEY = 'linea-font-family-v1'
 
 const estimatedTextBytes = (value) => value.length * 2
 
@@ -149,7 +152,9 @@ export default function App() {
   const [outlineCollapsed, setOutlineCollapsed] = useState(false)
   const [mobileOutlineOpen, setMobileOutlineOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
-  const [focusMode, setFocusMode] = useState(false)
+  const [focusMode, setFocusMode] = useState(null)
+  const [fontFamily, setFontFamily] = useState(() => window.localStorage.getItem(FONT_STORAGE_KEY) === 'sans' ? 'sans' : 'serif')
+  const [templateOpen, setTemplateOpen] = useState(false)
   const [dropActive, setDropActive] = useState(false)
   const [pendingFiles, setPendingFiles] = useState([])
   const [confirmation, setConfirmation] = useState(null)
@@ -293,12 +298,26 @@ export default function App() {
     }, 0)
   }, [activeId, selection])
 
-  const createDocument = useCallback(() => {
+  const createDocument = useCallback((template = DOCUMENT_TEMPLATES[0]) => {
     selectionsRef.current.set(activeId, selection)
-    setWorkspace((current) => createTab(current))
+    setWorkspace((current) => createTab(current, {
+      filename: getNextUntitledFilename(current, template.filename),
+      markdown: template.markdown,
+      dirty: template.markdown !== '',
+      exported: false,
+    }))
     setSelection(EMPTY_SELECTION)
+    setTemplateOpen(false)
     window.setTimeout(() => (richEditorRef.current || textareaRef.current)?.focus?.(), 0)
   }, [activeId, selection])
+
+  const openTemplates = useCallback(() => setTemplateOpen(true), [])
+
+  const changeFontFamily = useCallback((nextFamily) => {
+    const normalized = nextFamily === 'sans' ? 'sans' : 'serif'
+    setFontFamily(normalized)
+    window.localStorage.setItem(FONT_STORAGE_KEY, normalized)
+  }, [])
 
   const performClose = useCallback((tabId) => {
     const closingActiveTab = tabId === activeId
@@ -858,15 +877,19 @@ export default function App() {
     const targetLine = Math.max(1, line)
     const lines = activeTab.markdown.split('\n')
     const start = lines.slice(0, targetLine - 1).reduce((total, value) => total + value.length + 1, 0)
-    if (mode !== 'source' && mode !== 'split') setMode('source')
     const nextSelection = { start, end: start, direction: 'none' }
     restoreEditorSelection(nextSelection)
     setMobileOutlineOpen(false)
     window.setTimeout(() => textareaRef.current?.scrollToLine?.(targetLine), 0)
-  }, [activeTab.markdown, mode, restoreEditorSelection])
+  }, [activeTab.markdown, restoreEditorSelection])
 
-  const toggleFocusMode = useCallback(() => {
+  const toggleFocusMode = useCallback((kind = 'write') => {
     if (!focusMode) {
+      if (kind === 'read') {
+        setMode('split')
+        setFocusMode('read')
+        return
+      }
       const protectionNotice = richMarkdownNotice(activeTab.markdown)
       if (protectionNotice) {
         setMode('source')
@@ -874,10 +897,10 @@ export default function App() {
         return
       }
       setMode('rich')
-      setFocusMode(true)
+      setFocusMode('write')
       return
     }
-    setFocusMode(false)
+    setFocusMode(null)
   }, [activeTab.markdown, focusMode])
 
   useEffect(() => {
@@ -900,11 +923,13 @@ export default function App() {
         setAdvancedOpen(false)
         setBuilder(null)
         setGuideOpen(false)
+        setTemplateOpen(false)
         setDropActive(false)
         setMobileOutlineOpen(false)
+        setFocusMode(null)
         return
       }
-      const dialogOpen = Boolean(confirmation || pendingFiles.length || renameOpen || linkEditor.open || footnoteEditor.open || guideOpen || commandOpen || builder)
+      const dialogOpen = Boolean(confirmation || pendingFiles.length || renameOpen || linkEditor.open || footnoteEditor.open || guideOpen || commandOpen || builder || templateOpen)
       if (dialogOpen) return
       if (event.key === 'F2' && !command) {
         if (targetIsInput) return
@@ -917,7 +942,7 @@ export default function App() {
       if (targetIsInput && !editorHasFocus) return
       if (key === 'p' && event.shiftKey) { event.preventDefault(); setCommandOpen(true) }
       if (key === 'k' && !event.shiftKey && (!targetIsInput || editorHasFocus)) { event.preventDefault(); openLinkEditor('link') }
-      if (key === 't' && !event.shiftKey) { event.preventDefault(); createDocument() }
+      if (key === 't' && !event.shiftKey) { event.preventDefault(); createDocument(DOCUMENT_TEMPLATES[0]) }
       if (key === 'o' && !event.shiftKey) {
         event.preventDefault()
         openFilePicker()
@@ -939,7 +964,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [activateDocument, activeId, builder, changeMode, commandOpen, confirmation, createDocument, exportMarkdown, footnoteEditor.open, guideOpen, linkEditor.open, openFilePicker, openLinkEditor, openRename, pendingFiles.length, redo, renameOpen, requestClose, toggleFocusMode, toggleOutline, undo, workspace.tabs])
+  }, [activateDocument, activeId, builder, changeMode, commandOpen, confirmation, createDocument, exportMarkdown, focusMode, footnoteEditor.open, guideOpen, linkEditor.open, openFilePicker, openLinkEditor, openRename, pendingFiles.length, redo, renameOpen, requestClose, templateOpen, toggleFocusMode, toggleOutline, undo, workspace.tabs])
 
   const sourceFormatState = useMemo(() => {
     const state = getFormattingState(activeTab.markdown, selection.start, selection.end)
@@ -958,7 +983,8 @@ export default function App() {
   const documentStats = useMemo(() => getDocumentStats(activeTab.markdown), [activeTab.markdown])
 
   const commands = [
-    { id: 'new', label: 'Nuevo documento', shortcut: '⌘T', keywords: 'crear archivo', action: createDocument },
+    { id: 'new', label: 'Nuevo documento vacío', shortcut: '⌘T', keywords: 'crear archivo', action: () => createDocument(DOCUMENT_TEMPLATES[0]) },
+    { id: 'templates', label: 'Nuevo desde plantilla', keywords: 'crear reunión artículo diario tareas readme propuesta', action: openTemplates },
     { id: 'open', label: 'Abrir archivos', shortcut: '⌘O', keywords: 'importar cargar', action: openFilePicker },
     { id: 'rename', label: 'Renombrar documento', shortcut: 'F2', keywords: 'nombre título', action: openRename },
     { id: 'export', label: 'Exportar Markdown', shortcut: '⌘S', keywords: 'guardar descargar', action: exportMarkdown },
@@ -977,7 +1003,8 @@ export default function App() {
     { id: 'rich', label: 'Cambiar a edición enriquecida', shortcut: '⌘⇧L', keywords: 'wysiwyg documento word', action: () => changeMode('rich') },
     { id: 'source', label: 'Cambiar a Markdown', shortcut: '⌘⇧E', keywords: 'fuente código crudo', action: () => changeMode('source') },
     { id: 'split', label: 'Comparar Markdown y resultado', shortcut: '⌘⇧D', action: () => changeMode('split') },
-    { id: 'focus', label: focusMode ? 'Salir del modo concentración' : 'Entrar en modo concentración', shortcut: '⌘⇧F', action: toggleFocusMode },
+    { id: 'focus', label: focusMode ? 'Salir del modo concentración' : 'Concentración para escribir', shortcut: '⌘⇧F', action: () => toggleFocusMode('write') },
+    { id: 'focus-read', label: 'Concentración para leer', keywords: 'lectura pantalla limpia', action: () => toggleFocusMode('read') },
     { id: 'guide', label: 'Abrir guía rápida', shortcut: '⌘/', action: () => setGuideOpen(true) },
   ]
 
@@ -1006,7 +1033,7 @@ export default function App() {
 
   return (
     <div
-      className={`app-shell is-mode-${mode}${focusMode ? ' is-focus-mode' : ''}`}
+      className={`app-shell is-mode-${mode}${focusMode ? ` is-focus-mode is-focus-${focusMode}` : ''}${fontFamily === 'sans' ? ' is-font-sans' : ''}`}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -1024,8 +1051,11 @@ export default function App() {
         onCommand={() => setCommandOpen(true)}
         onRename={openRename}
         onOutline={toggleOutline}
+        fontFamily={fontFamily}
+        onFontChange={changeFontFamily}
+        onEnterFocusMode={toggleFocusMode}
       />
-      <DocumentTabs documents={workspace.tabs} activeId={activeId} onActivate={activateDocument} onClose={requestClose} onNew={createDocument} onRename={openRename} />
+      <DocumentTabs documents={workspace.tabs} activeId={activeId} onActivate={activateDocument} onClose={requestClose} onNew={openTemplates} onRename={openRename} />
       <FormattingToolbar
         onFormat={applyFormat}
         onHeading={applyHeading}
@@ -1083,11 +1113,12 @@ export default function App() {
       <QuickGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
       <DropOverlay visible={dropActive} />
       {focusMode ? (
-        <button className="focus-exit-button" type="button" onClick={() => setFocusMode(false)}>
+        <button className="focus-exit-button" type="button" onClick={() => setFocusMode(null)}>
           <span aria-hidden="true">×</span>
           Salir de concentración
         </button>
       ) : null}
+      {templateOpen ? <TemplateDialog templates={DOCUMENT_TEMPLATES} onSelect={createDocument} onCancel={() => setTemplateOpen(false)} /> : null}
       {!confirmation ? <ImportDialog files={pendingFiles} dirty={needsDiscardConfirmation(activeTab)} onNewTabs={importInNewTabs} onReplace={requestReplace} onCancel={() => setPendingFiles([])} /> : null}
       {confirmation ? (
         <ConfirmDialog

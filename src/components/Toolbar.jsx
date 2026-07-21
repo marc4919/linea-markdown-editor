@@ -9,6 +9,7 @@ import {
   OutlineIcon,
   SplitIcon,
 } from './Icons.jsx'
+import AppearanceMenu from './AppearanceMenu.jsx'
 
 const modes = [
   { id: 'rich', label: 'Edición enriquecida', icon: LiveIcon },
@@ -16,7 +17,7 @@ const modes = [
   { id: 'split', label: 'Comparar', icon: SplitIcon },
 ]
 
-export default function Toolbar({ filename, mode, saveState, onModeChange, onOpen, onDownload, onExportHtml, onExportPdf, onCommand, onRename, onOutline }) {
+export default function Toolbar({ filename, mode, saveState, onModeChange, onOpen, onDownload, onExportHtml, onExportPdf, onCommand, onRename, onOutline, fontFamily, onFontChange, onEnterFocusMode }) {
   const runExport = (event, action) => {
     const details = event.currentTarget.closest('details')
     const summary = details?.querySelector('summary')
@@ -55,6 +56,7 @@ export default function Toolbar({ filename, mode, saveState, onModeChange, onOpe
       </div>
 
       <div className="toolbar-actions">
+        <AppearanceMenu fontFamily={fontFamily} onFontChange={onFontChange} onEnterFocusMode={onEnterFocusMode} />
         <button className="mobile-outline-button" type="button" aria-label="Abrir estructura" title="Estructura" onClick={onOutline}>
           <OutlineIcon />
         </button>

@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react'
 import { renderMarkdown } from '../lib/markdown.js'
 import { renderMermaidSvg } from '../lib/mermaidRenderer.js'
 
-export default function PreviewPane({ markdown }) {
-  const rendered = useMemo(() => renderMarkdown(markdown), [markdown])
+const PreviewPane = forwardRef(function PreviewPane({ markdown }, forwardedRef) {
+  const rendered = useMemo(() => renderMarkdown(markdown, { sourceMap: true }), [markdown])
   const articleRef = useRef(null)
 
   useEffect(() => {
@@ -39,6 +39,17 @@ export default function PreviewPane({ markdown }) {
     return () => { cancelled = true }
   }, [rendered])
 
+  useImperativeHandle(forwardedRef, () => ({
+    scrollToLine(line) {
+      const target = articleRef.current?.querySelector(`[data-source-line="${Math.max(1, Number(line) || 1)}"]`)
+      target?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+      if (!target) return false
+      target.classList.add('is-outline-target')
+      window.setTimeout(() => target.classList.remove('is-outline-target'), 1200)
+      return true
+    },
+  }), [])
+
   return (
     <section className="pane preview-pane" aria-labelledby="preview-heading">
       <div className="pane-heading" id="preview-heading">
@@ -48,4 +59,6 @@ export default function PreviewPane({ markdown }) {
       <article ref={articleRef} className="markdown-preview" dangerouslySetInnerHTML={{ __html: rendered }} />
     </section>
   )
-}
+})
+
+export default PreviewPane

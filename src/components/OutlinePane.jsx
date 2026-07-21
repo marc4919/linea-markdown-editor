@@ -11,8 +11,8 @@ export function getHeadings(markdown) {
 export default function OutlinePane({ markdown, collapsed, mobileOpen, onToggle, onMobileClose, onNavigate }) {
   const headings = getHeadings(markdown)
   const hasHeadings = headings.length > 0
-  const navigate = (line) => {
-    onNavigate(line)
+  const navigate = (heading, index) => {
+    onNavigate({ ...heading, index })
     onMobileClose?.()
   }
 
@@ -33,12 +33,12 @@ export default function OutlinePane({ markdown, collapsed, mobileOpen, onToggle,
       </div>
       {!collapsed || mobileOpen ? (
         <nav className="outline-list" aria-label="Encabezados">
-          {hasHeadings ? headings.map((heading) => (
+          {hasHeadings ? headings.map((heading, index) => (
             <button
               key={`${heading.line}-${heading.text}`}
               type="button"
               style={{ '--outline-level': heading.level }}
-              onClick={() => navigate(heading.line)}
+              onClick={() => navigate(heading, index)}
             >
               {heading.text}
             </button>

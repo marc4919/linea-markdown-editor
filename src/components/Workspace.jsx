@@ -25,6 +25,7 @@ export default function Workspace({
   onNavigate,
 }) {
   const workspaceRef = useRef(null)
+  const previewRef = useRef(null)
   const draggingRef = useRef(false)
   const [split, setSplit] = useState(50)
 
@@ -69,6 +70,14 @@ export default function Workspace({
     else setSplit((current) => Math.min(68, Math.max(32, current + (event.key === 'ArrowRight' ? 2 : -2))))
   }
 
+  const navigateToHeading = (heading) => {
+    const mobileResult = mode === 'split' && window.matchMedia('(max-width: 760px)').matches
+    if (mode === 'rich') richEditorRef.current?.navigateToHeading?.(heading.index)
+    else if (mobileResult) previewRef.current?.scrollToLine?.(heading.line)
+    else onNavigate(heading.line)
+    onCloseMobileOutline?.()
+  }
+
   return (
     <div className="workspace-frame">
       <OutlinePane
@@ -77,7 +86,7 @@ export default function Workspace({
         mobileOpen={mobileOutlineOpen}
         onToggle={onToggleOutline}
         onMobileClose={onCloseMobileOutline}
-        onNavigate={onNavigate}
+        onNavigate={navigateToHeading}
       />
       <main
         id="workspace"
@@ -122,7 +131,7 @@ export default function Workspace({
             onKeyDown={resizeWithKeyboard}
           ><span aria-hidden="true">••<br />••</span></div>
         ) : null}
-        {mode === 'split' ? <PreviewPane markdown={markdown} /> : null}
+        {mode === 'split' ? <PreviewPane ref={previewRef} markdown={markdown} /> : null}
       </main>
     </div>
   )

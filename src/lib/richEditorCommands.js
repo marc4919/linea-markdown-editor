@@ -1,6 +1,31 @@
 import { getMarkRange } from '@tiptap/core'
 import { TextSelection } from '@tiptap/pm/state'
 
+const INLINE_WHITESPACE = /^\s+$/u
+
+export function normalizeRichInlineSelection(editor) {
+  if (!editor) return null
+  const { selection, doc } = editor.state
+  const { from, to, $from, $to } = selection
+  if (!$from.parent.inlineContent || !$to.parent.inlineContent || $from.parent !== $to.parent) return { from, to }
+
+  const selected = doc.textBetween(from, to, '', '')
+  if (selected && !INLINE_WHITESPACE.test(selected)) {
+    const leading = selected.match(/^\s+/u)?.[0].length ?? 0
+    const trailing = selected.match(/\s+$/u)?.[0].length ?? 0
+    return { from: from + leading, to: Math.max(from + leading, to - trailing) }
+  }
+
+  if (!selected && from === to) return { from, to }
+  const before = $from.parent.textContent.slice(0, $from.parentOffset)
+  const previousWord = before.match(/\S+\s*$/u)
+  if (!previousWord) return { from, to }
+  const word = previousWord[0].trimEnd()
+  const parentStart = $from.start()
+  const wordFrom = parentStart + previousWord.index
+  return { from: wordFrom, to: wordFrom + word.length }
+}
+
 function topLevelInsertionPoint(editor) {
   const { $to } = editor.state.selection
   return $to.depth > 0 ? $to.after(1) : $to.pos

@@ -14,8 +14,19 @@ import {
   insertRichMarkdownPreservingSelection,
   insertRichNodePreservingSelection,
   isRichSelectionInsideTable,
+  normalizeRichInlineSelection,
   setRichLink,
 } from './richEditorCommands.js'
+
+test('normaliza espacios de una selección enriquecida antes de aplicar formato', () => {
+  const editor = new Editor({ extensions: [StarterKit, Markdown], content: 'Una palabra ', contentType: 'markdown' })
+  editor.commands.setTextSelection({ from: 5, to: 13 })
+  assert.deepEqual(normalizeRichInlineSelection(editor), { from: 5, to: 12 })
+
+  editor.commands.setTextSelection({ from: 12, to: 13 })
+  assert.deepEqual(normalizeRichInlineSelection(editor), { from: 5, to: 12 })
+  editor.destroy()
+})
 
 test('los bloques enriquecidos no sustituyen el texto seleccionado', () => {
   const editor = new Editor({

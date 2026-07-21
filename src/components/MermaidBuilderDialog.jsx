@@ -102,9 +102,9 @@ function BuilderListActions({ label, index, length, minimum, onMove, onRemove })
 
   return (
     <div className="builder-list-actions">
-      <button type="button" disabled={index === 0} aria-label={`Subir ${label}`} onClick={(event) => moveAndRefocus(-1, event)}>Subir</button>
-      <button type="button" disabled={index === length - 1} aria-label={`Bajar ${label}`} onClick={(event) => moveAndRefocus(1, event)}>Bajar</button>
-      <button type="button" disabled={length <= minimum} aria-label={`Eliminar ${label}`} onClick={onRemove}><TrashIcon /></button>
+      <button type="button" disabled={index === 0} aria-label={`Subir ${label}`} title="Subir" onClick={(event) => moveAndRefocus(-1, event)}>↑</button>
+      <button type="button" disabled={index === length - 1} aria-label={`Bajar ${label}`} title="Bajar" onClick={(event) => moveAndRefocus(1, event)}>↓</button>
+      <button type="button" disabled={length <= minimum} aria-label={`Eliminar ${label}`} title="Eliminar" onClick={onRemove}><TrashIcon /></button>
     </div>
   )
 }
@@ -572,7 +572,13 @@ export default function MermaidBuilderDialog({
           <legend><SectionLegend number="1">Elige el tipo de diagrama</SectionLegend></legend>
           <div className="mermaid-template-options">
             {TEMPLATES.map((template, index) => (
-              <label className={`mermaid-template-option${currentSpec.type === template.type ? ' is-selected' : ''}`} key={template.type}>
+              <label
+                className={`mermaid-template-option${currentSpec.type === template.type ? ' is-selected' : ''}`}
+                key={template.type}
+                onClick={(event) => {
+                  if (event.target.tagName !== 'INPUT') onChange(getDefaultMermaidSpec(template.type))
+                }}
+              >
                 <input
                   autoFocus={currentSpec.type === template.type}
                   type="radio"

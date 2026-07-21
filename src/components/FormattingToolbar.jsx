@@ -56,8 +56,8 @@ export default function FormattingToolbar({
   return (
     <nav className={`formatting-toolbar${disabled ? ' is-disabled' : ''}`} aria-label="Herramientas de formato">
       <div className="history-tools" aria-label="Historial">
-        <button type="button" aria-label="Deshacer" title="Deshacer (⌘Z)" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => { closeAdvanced(); onUndo?.() }}><UndoIcon /></button>
-        <button type="button" aria-label="Rehacer" title="Rehacer (⇧⌘Z)" disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => { closeAdvanced(); onRedo?.() }}><RedoIcon /></button>
+        <button type="button" aria-label="Deshacer" title="Deshacer (⌘Z)" disabled={disabled} onPointerDown={(event) => event.preventDefault()} onClick={() => { closeAdvanced(); onUndo?.() }}><UndoIcon /></button>
+        <button type="button" aria-label="Rehacer" title="Rehacer (⇧⌘Z)" disabled={disabled} onPointerDown={(event) => event.preventDefault()} onClick={() => { closeAdvanced(); onRedo?.() }}><RedoIcon /></button>
       </div>
       <label className="heading-control">
         <span className="sr-only">Estilo de párrafo</span>
@@ -85,7 +85,7 @@ export default function FormattingToolbar({
                   aria-pressed={active}
                   title="Enlace (⌘K)"
                   disabled={toolDisabled}
-                  onMouseDown={(event) => event.preventDefault()}
+                  onPointerDown={(event) => event.preventDefault()}
                   onClick={() => { closeAdvanced(); onRequestLink?.() }}
                 >
                   <LinkIcon />
@@ -105,7 +105,7 @@ export default function FormattingToolbar({
               aria-pressed={active}
               title={`${label}${shortcut ? ` (${shortcut})` : ''}`}
               disabled={toolDisabled}
-              onMouseDown={(event) => event.preventDefault()}
+              onPointerDown={(event) => event.preventDefault()}
               onClick={() => { closeAdvanced(); onFormat?.(id) }}
             >
               <ToolIcon />
