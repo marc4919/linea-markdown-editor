@@ -45,10 +45,7 @@ export function RenameDialog({ value, onChange, onConfirm, onCancel }) {
         <h2 id="rename-title">Renombrar documento</h2>
         <label>
           <span>Nombre del archivo</span>
-          <span className="rename-input-group">
-            <input autoFocus value={value} onChange={(event) => onChange(event.target.value)} />
-            <span className="rename-suffix" aria-hidden="true">.md</span>
-          </span>
+          <input autoFocus value={value} onChange={(event) => onChange(event.target.value)} />
         </label>
         <div className="confirm-actions">
           <button type="button" onClick={onCancel}>Cancelar</button>

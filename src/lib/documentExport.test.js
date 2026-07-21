@@ -35,7 +35,7 @@ test('escapa metadatos insertados en el documento autónomo', () => {
   })
 
   assert.match(html, /<title>Ideas &lt;\/title&gt;&lt;script&gt;alert\(1\)&lt;\/script&gt;<\/title>/)
-  assert.match(html, /<html lang="es&quot;&gt;&lt;script&gt;">/)
+  assert.match(html, /<html class="export-font-serif" lang="es&quot;&gt;&lt;script&gt;">/)
   assert.doesNotMatch(html, /<title>Ideas <\/title><script>/)
 })
 
@@ -165,7 +165,7 @@ test('la variante de pantalla es autónoma y no añade controles de impresión',
     variant: 'screen',
   })
 
-  assert.match(html, /^<!doctype html><html lang="es"><head>/)
+  assert.match(html, /^<!doctype html><html class="export-font-serif" lang="es"><head>/)
   assert.match(html, /<body class="export-page export-page--screen">/)
   assert.match(html, /<main class="export-document"><h1>Ensayo<\/h1><\/main>/)
   assert.doesNotMatch(html, /data-linea-print-button|@page/)
@@ -179,7 +179,7 @@ test('la variante imprimible configura A4, paginación y controles no imprimible
     warningCount: 2,
   })
 
-  assert.match(html, /<html lang="es" data-export-ready="false" data-export-warnings="2">/)
+  assert.match(html, /<html class="export-font-serif" lang="es" data-export-ready="false" data-export-warnings="2">/)
   assert.match(html, /@page\{size:A4 portrait;margin:18mm 17mm 20mm\}/)
   assert.match(html, /img\{width:auto;max-width:100%;max-height:245mm;object-fit:contain\}/)
   assert.match(html, /\.mermaid-export svg\{width:auto;max-width:100%;max-height:245mm;object-fit:contain\}/)
@@ -213,6 +213,17 @@ test('renderStandaloneExport compone cuerpo y documento con un solo renderizado'
   assert.match(html, /<title>informe final<\/title>/)
   assert.match(html, /<h1>Informe<\/h1>/)
   assert.match(html, /<svg data-export="diagram"><\/svg>/)
+})
+
+test('la tipografía sin serifa se conserva en HTML y PDF', async () => {
+  const html = await renderStandaloneExport({
+    markdown: '# Documento',
+    variant: 'print',
+    fontFamily: 'sans',
+  })
+
+  assert.match(html, /<html class="export-font-sans"/)
+  assert.match(html, /html\.export-font-sans\{font-family:Inter,-apple-system/)
 })
 
 test('renderStandaloneExport fuerza carga eager de imágenes solo en impresión', async () => {

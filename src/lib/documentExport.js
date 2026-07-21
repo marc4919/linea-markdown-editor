@@ -2,6 +2,7 @@ import { renderMarkdown } from './markdown.js'
 import { renderMermaidSvg } from './mermaidRenderer.js'
 
 const EXPORT_VARIANTS = new Set(['screen', 'print'])
+const EXPORT_FONT_FAMILIES = new Set(['serif', 'sans'])
 const DOCUMENT_EXTENSION = /\.(?:md|markdown|txt|html|pdf)$/i
 const MERMAID_FENCE = /<pre(?:\s[^>]*)?><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g
 
@@ -9,6 +10,7 @@ const BASE_EXPORT_STYLES = `
 :root{color-scheme:light;--paper:#fff;--ink:#211f1c;--muted:#69645d;--line:#d9d6cf;--soft:#f7f6f2;--accent:#c92e28}
 *{box-sizing:border-box}
 html{background:var(--paper);color:var(--ink);font-family:Georgia,"Times New Roman",serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+html.export-font-sans{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 body{min-height:100vh;margin:0;background:var(--paper)}
 .export-document{width:min(100% - 48px,760px);margin:64px auto;color:var(--ink);font-size:19px;line-height:1.62;overflow-wrap:anywhere}
 h1,h2,h3,h4,h5,h6{margin:1.35em 0 .55em;color:var(--ink);line-height:1.12;break-after:avoid-page;page-break-after:avoid;orphans:3;widows:3}
@@ -197,6 +199,7 @@ export function createStandaloneExportDocument({
   variant = 'screen',
   language = 'es',
   warningCount = 0,
+  fontFamily = 'serif',
 } = {}) {
   if (!EXPORT_VARIANTS.has(variant)) {
     throw new TypeError(`Variante de exportación no válida: ${variant}`)
@@ -209,8 +212,9 @@ export function createStandaloneExportDocument({
   const script = printable ? PRINT_READY_SCRIPT : ''
   const styles = printable ? `${BASE_EXPORT_STYLES}\n${PRINT_EXPORT_STYLES}` : BASE_EXPORT_STYLES
   const normalizedWarningCount = Number.isFinite(warningCount) ? Math.max(0, Math.trunc(warningCount)) : 0
+  const normalizedFontFamily = EXPORT_FONT_FAMILIES.has(fontFamily) ? fontFamily : 'serif'
 
-  return `<!doctype html><html lang="${escapeDocumentText(language)}"${printable ? ` data-export-ready="false" data-export-warnings="${normalizedWarningCount}"` : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeDocumentText(title)}</title><style>${styles}</style></head><body class="export-page export-page--${variant}">${controls}<main class="export-document">${String(bodyHtml ?? '')}</main>${script}</body></html>`
+  return `<!doctype html><html class="export-font-${normalizedFontFamily}" lang="${escapeDocumentText(language)}"${printable ? ` data-export-ready="false" data-export-warnings="${normalizedWarningCount}"` : ''}><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeDocumentText(title)}</title><style>${styles}</style></head><body class="export-page export-page--${variant}">${controls}<main class="export-document">${String(bodyHtml ?? '')}</main>${script}</body></html>`
 }
 
 export async function renderStandaloneExport({
@@ -223,6 +227,7 @@ export async function renderStandaloneExport({
   diagramTimeoutMs,
   diagramBudgetMs,
   onWarning,
+  fontFamily = 'serif',
 } = {}) {
   const warnings = []
   const bodyHtml = await renderExportBody(markdown, {
@@ -235,5 +240,5 @@ export async function renderStandaloneExport({
       onWarning?.(warning)
     },
   })
-  return createStandaloneExportDocument({ bodyHtml, title, variant, language, warningCount: warnings.length })
+  return createStandaloneExportDocument({ bodyHtml, title, variant, language, warningCount: warnings.length, fontFamily })
 }

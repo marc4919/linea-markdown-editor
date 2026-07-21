@@ -434,6 +434,7 @@ export default function App() {
       markdown: markdownSnapshot,
       filename: filenameSnapshot,
       variant: 'screen',
+      fontFamily,
       onWarning: (warning) => warnings.push(warning),
     })
     downloadBlob(html, 'text/html;charset=utf-8', filename)
@@ -451,7 +452,7 @@ export default function App() {
     setNotice(snapshotIsCurrent
       ? `Exportado como ${filename}.${warningSuffix}`
       : `Se exportó una instantánea como ${filename}; los cambios posteriores siguen pendientes.${warningSuffix}`)
-  }, [activeId, activeTab.filename, activeTab.markdown])
+  }, [activeId, activeTab.filename, activeTab.markdown, fontFamily])
 
   const exportPdf = useCallback(() => {
     const printWindow = window.open('', '_blank')
@@ -481,6 +482,7 @@ export default function App() {
       markdown: markdownSnapshot,
       filename: filenameSnapshot,
       variant: 'print',
+      fontFamily,
     }).then((html) => {
       if (printWindow.closed) return
       printWindow.document.open()
@@ -493,7 +495,7 @@ export default function App() {
       }
       setNotice('No se ha podido preparar el PDF.')
     })
-  }, [activeTab.filename, activeTab.markdown])
+  }, [activeTab.filename, activeTab.markdown, fontFamily])
 
   const openRename = useCallback(() => {
     renameTabIdRef.current = activeId
@@ -1106,9 +1108,9 @@ export default function App() {
       <QuickGuide open={guideOpen} onClose={() => setGuideOpen(false)} />
       <DropOverlay visible={dropActive} />
       {focusMode ? (
-        <button className="focus-exit-button" type="button" onClick={() => setFocusMode(null)}>
+        <button className="focus-exit-button" type="button" aria-label="Volver a la interfaz" title="Volver a la interfaz" onClick={() => setFocusMode(null)}>
           <span aria-hidden="true">×</span>
-          Salir de concentración
+          <span className="sr-only">Volver a la interfaz</span>
         </button>
       ) : null}
       {!confirmation ? <ImportDialog files={pendingFiles} dirty={needsDiscardConfirmation(activeTab)} onNewTabs={importInNewTabs} onReplace={requestReplace} onCancel={() => setPendingFiles([])} /> : null}
