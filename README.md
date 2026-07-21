@@ -1,23 +1,50 @@
-# Línea
+<p align="center">
+  <a href="https://linea-markdown-editor.marcgt.chatgpt.site">
+    <img src="public/og.png" alt="Línea — editor Markdown local y tranquilo" width="100%" />
+  </a>
+</p>
 
-Un espacio local y tranquilo para escribir Markdown. Línea combina edición y vista previa, varios documentos en pestañas y recuperación automática sin necesitar una cuenta.
+<h1 align="center">Línea</h1>
+
+<p align="center">
+  Un espacio local y tranquilo para escribir Markdown.<br />
+  <a href="https://linea-markdown-editor.marcgt.chatgpt.site"><strong>Probar Línea ↗</strong></a>
+</p>
+
+<p align="center">
+  <a href="#privacidad">Privado por diseño</a> ·
+  <a href="#funciones">Escribe con foco</a> ·
+  <a href="#ejecutar-en-local">Código abierto</a>
+</p>
+
+## En movimiento
+
+<p align="center">
+  <video src="https://github.com/marc4919/linea-markdown-editor/raw/refs/heads/main/public/linea-demo.mp4" width="100%" autoplay muted loop playsinline controls>
+    Tu navegador no puede reproducir el vídeo. <a href="https://github.com/marc4919/linea-markdown-editor/raw/refs/heads/main/public/linea-demo.mp4">Ver la demo</a>.
+  </video>
+</p>
+
+> El vídeo se reproduce sin sonido al abrir el README. Si GitHub o tu navegador bloquea la reproducción automática, puedes iniciarlo con los controles.
+
+## Un editor que deja espacio a las ideas
+
+Línea combina una escritura serena con herramientas potentes: Markdown en vivo, edición enriquecida, vista previa, exportación y una organización clara de tus documentos. Todo sucede en el navegador, sin cuentas ni servidores.
+
+| Escribe | Organiza | Comparte |
+| :-- | :-- | :-- |
+| Markdown, formato enriquecido y atajos pensados para no romper el ritmo. | Pestañas, esquema de encabezados, paleta de comandos y modo concentración. | Exporta tus textos a Markdown, HTML o PDF cuando estén listos. |
 
 ## Funciones
 
-- Pestañas independientes que se restauran al recargar.
-- Formato reversible: negrita, cursiva, enlaces, listas, citas y código.
-- Selector de párrafo y cabeceras H1–H6.
-- Atajos de teclado para formato, documentos y comandos.
-- Apertura de uno o varios archivos con selector o arrastrando sobre la app.
-- Confirmación antes de cerrar o reemplazar trabajo sin exportar.
-- Exportación a Markdown, HTML y PDF mediante el diálogo nativo del navegador.
-- Esquema navegable de encabezados.
-- Edición enriquecida, Markdown y comparación con resultado renderizado; comportamiento adaptado para móvil.
-- Paleta de comandos con `⌘⇧P` o `Ctrl+Shift+P`.
-- Modo concentración y guía rápida.
-- Guardado automático local con estado real de éxito o error.
+- **Tres formas de trabajar:** editor enriquecido, Markdown en vivo y comparación con el resultado renderizado.
+- **Todo a mano:** negrita, cursiva, enlaces, listas, citas, código, tablas, Mermaid y notas al pie.
+- **Documentos bajo control:** pestañas independientes, recuperación automática, esquema navegable y confirmación ante cambios sin exportar.
+- **Diseñado para el ritmo:** selector de encabezados, atajos de teclado, paleta de comandos (`⌘⇧P` / `Ctrl+Shift+P`) y guía rápida.
+- **También en móvil:** navegación y modo de enfoque adaptados a pantallas pequeñas.
+- **Exportación sencilla:** guarda en Markdown, HTML o PDF desde el diálogo nativo del navegador.
 
-## Ejecutar
+## Ejecutar en local
 
 Requiere Node.js 22.12 o superior.
 
@@ -26,14 +53,18 @@ npm install
 npm run dev
 ```
 
+Abre la dirección que indique Vite y empieza a escribir.
+
 ## Comprobar
 
 ```bash
 npm run check
 ```
 
-El comando ejecuta las pruebas del motor de formato y del modelo de pestañas, seguido del build de producción.
+Este comando ejecuta las pruebas del motor de formato y del modelo de pestañas, seguido del build de producción.
 
 ## Privacidad
 
-El contenido se guarda en el almacenamiento local del navegador. No se envía a servidores y la interfaz no carga tipografías ni recursos externos. “Guardado en Línea” significa que la sesión puede recuperarse; “Exportado” indica que existe una copia descargada por el usuario.
+El contenido se guarda en el almacenamiento local del navegador. No se envía a servidores y la interfaz no carga tipografías ni recursos externos.
+
+**Guardado en Línea** significa que la sesión puede recuperarse en este dispositivo. **Exportado** significa que ya existe una copia descargada por ti.

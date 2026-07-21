@@ -11,3 +11,5 @@ test-results/
 .wrangler/
 outputs/
 work/
+.playwright-cli/
+output/
