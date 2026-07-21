@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import EditorPane from './EditorPane.jsx'
+import LiveEditorPane from './LiveEditorPane.jsx'
 import OutlinePane from './OutlinePane.jsx'
 import PreviewPane from './PreviewPane.jsx'
 
-export default function Workspace({ markdown, mode, onModeChange, onMarkdownChange, onCursorChange, onSelectionChange, onEditorKeyDown, textareaRef, outlineCollapsed, onToggleOutline, onNavigate }) {
+export default function Workspace({ markdown, mode, onModeChange, onMarkdownChange, onCursorChange, onSelectionChange, onEditorKeyDown, onUndo, onRedo, textareaRef, outlineCollapsed, onToggleOutline, onNavigate }) {
   const workspaceRef = useRef(null)
   const draggingRef = useRef(false)
   const [split, setSplit] = useState(50)
@@ -31,6 +31,10 @@ export default function Workspace({ markdown, mode, onModeChange, onMarkdownChan
     }
   }, [handlePointerMove, stopDragging])
 
+  useEffect(() => {
+    if (mode !== 'preview') textareaRef.current?.requestMeasure?.()
+  }, [mode, textareaRef])
+
   const startDragging = (event) => {
     event.preventDefault()
     draggingRef.current = true
@@ -55,12 +59,21 @@ export default function Workspace({ markdown, mode, onModeChange, onMarkdownChan
         style={{ '--editor-width': `${split}%` }}
       >
         <div className="mobile-view-switch" role="group" aria-label="Vista del documento">
-          <button type="button" className={mode !== 'preview' ? 'is-active' : ''} aria-pressed={mode !== 'preview'} onClick={() => onModeChange('edit')}>Editar</button>
+          <button type="button" className={mode === 'live' || mode === 'split' ? 'is-active' : ''} aria-pressed={mode === 'live' || mode === 'split'} onClick={() => onModeChange('live')}>Live</button>
+          <button type="button" className={mode === 'source' ? 'is-active' : ''} aria-pressed={mode === 'source'} onClick={() => onModeChange('source')}>Fuente</button>
           <button type="button" className={mode === 'preview' ? 'is-active' : ''} aria-pressed={mode === 'preview'} onClick={() => onModeChange('preview')}>Vista previa</button>
         </div>
-        {mode !== 'preview' ? (
-          <EditorPane markdown={markdown} onChange={onMarkdownChange} onCursorChange={onCursorChange} onSelectionChange={onSelectionChange} onKeyDown={onEditorKeyDown} textareaRef={textareaRef} />
-        ) : null}
+        <LiveEditorPane
+          markdown={markdown}
+          variant={mode === 'source' ? 'source' : 'live'}
+          onChange={onMarkdownChange}
+          onCursorChange={onCursorChange}
+          onSelectionChange={onSelectionChange}
+          onKeyDown={onEditorKeyDown}
+          onUndo={onUndo}
+          onRedo={onRedo}
+          textareaRef={textareaRef}
+        />
         {mode === 'split' ? (
           <div
             className="splitter"
@@ -76,7 +89,7 @@ export default function Workspace({ markdown, mode, onModeChange, onMarkdownChan
             onKeyDown={resizeWithKeyboard}
           ><span aria-hidden="true">••<br />••</span></div>
         ) : null}
-        {mode !== 'edit' ? <PreviewPane markdown={markdown} /> : null}
+        {mode === 'split' || mode === 'preview' ? <PreviewPane markdown={markdown} onNavigate={onNavigate} /> : null}
       </main>
     </div>
   )

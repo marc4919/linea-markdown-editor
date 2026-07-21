@@ -1,15 +1,19 @@
 import {
+  CodeIcon,
   CommandIcon,
   DownloadIcon,
   EditIcon,
   FolderIcon,
+  LiveIcon,
+  MoreIcon,
   PlusIcon,
   PreviewIcon,
   SplitIcon,
 } from './Icons.jsx'
 
 const modes = [
-  { id: 'edit', label: 'Editar', icon: EditIcon },
+  { id: 'live', label: 'Live', icon: LiveIcon },
+  { id: 'source', label: 'Fuente', icon: CodeIcon },
   { id: 'split', label: 'Dividir', icon: SplitIcon },
   { id: 'preview', label: 'Vista previa', icon: PreviewIcon },
 ]
@@ -34,7 +38,10 @@ export default function Toolbar({ filename, mode, saveState, onModeChange, onNew
         </details>
       </nav>
 
-      <button className="active-filename" type="button" title="Renombrar documento" onClick={onRename}>{filename}</button>
+      <button className="active-filename" type="button" aria-label={`Renombrar ${filename}`} title="Renombrar documento" onClick={onRename}>
+        <span>{filename}</span>
+        <EditIcon />
+      </button>
 
       <div className={`save-state is-${saveState.kind}`} role="status" aria-live="polite" aria-label={saveState.label} title={saveState.label}>
         <span className="save-check" aria-hidden="true">{saveState.kind === 'error' ? '!' : saveState.kind === 'saving' ? '·' : '✓'}</span>
@@ -42,8 +49,11 @@ export default function Toolbar({ filename, mode, saveState, onModeChange, onNew
       </div>
 
       <div className="toolbar-actions">
-        <button className="command-button" type="button" aria-label="Abrir paleta de comandos" title="Comandos (⌘K)" onClick={onCommand}>
-          <CommandIcon /><span>Comandos</span><kbd>⌘K</kbd>
+        <button className="command-button" type="button" aria-label="Abrir paleta de comandos" title="Comandos (⌘⇧P)" onClick={onCommand}>
+          <span className="command-icon command-icon-desktop" aria-hidden="true"><CommandIcon /></span>
+          <span className="command-icon command-icon-mobile" aria-hidden="true"><MoreIcon /></span>
+          <span className="command-label">Comandos</span>
+          <kbd>⌘⇧P</kbd>
         </button>
         <div className="mode-switch" role="group" aria-label="Modo de visualización">
           {modes.map(({ id, label, icon: ModeIcon }) => (

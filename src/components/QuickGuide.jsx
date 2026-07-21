@@ -8,8 +8,11 @@ const examples = [
   ['Enlace', '[nombre](https://...)'],
   ['Lista', '- Un elemento'],
   ['Tarea', '- [ ] Pendiente'],
+  ['Tabla', '| Nombre | Estado |'],
   ['Cita', '> Una idea para recordar'],
   ['Código', '`fragmento`'],
+  ['Nota al pie', 'Una idea[^1] · [^1]: Fuente'],
+  ['Diagrama', '```mermaid · flowchart LR'],
 ]
 
 export default function QuickGuide({ open, onClose }) {
@@ -31,13 +34,13 @@ export default function QuickGuide({ open, onClose }) {
         </div>
         <button ref={closeRef} type="button" aria-label="Cerrar guía" onClick={onClose}><CloseIcon /></button>
       </div>
-      <p className="guide-intro">Selecciona un texto y usa la barra. Si el formato ya está activo, Línea lo quitará sin tocar el contenido.</p>
+      <p className="guide-intro">Escribe directamente en Live para ver el formato mientras trabajas. Usa Fuente cuando quieras controlar cada carácter de Markdown.</p>
       <dl>
         {examples.map(([term, example]) => (
           <div key={term}><dt>{term}</dt><dd><code>{example}</code></dd></div>
         ))}
       </dl>
-      <p className="guide-tip"><strong>Consejo:</strong> abre la paleta con <kbd>⌘K</kbd> para encontrar cualquier acción.</p>
+      <p className="guide-tip"><strong>Consejo:</strong> abre la paleta con <kbd>⌘⇧P</kbd> para encontrar cualquier acción. <kbd>⌘K</kbd> abre el editor de enlaces.</p>
     </aside>
   )
 }

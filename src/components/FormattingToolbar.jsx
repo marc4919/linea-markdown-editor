@@ -9,17 +9,31 @@ import {
   RedoIcon,
   UndoIcon,
 } from './Icons.jsx'
+import AdvancedMenu from './AdvancedMenu.jsx'
+import LinkPopover from './LinkPopover.jsx'
 
 const tools = [
   { id: 'bold', label: 'Negrita', shortcut: '⌘B', icon: BoldIcon },
   { id: 'italic', label: 'Cursiva', shortcut: '⌘I', icon: ItalicIcon },
-  { id: 'link', label: 'Enlace', icon: LinkIcon },
+  { id: 'link', label: 'Enlace', shortcut: '⌘K', icon: LinkIcon },
   { id: 'list', label: 'Lista', icon: ListIcon },
   { id: 'quote', label: 'Cita', icon: QuoteIcon },
   { id: 'code', label: 'Código', icon: CodeIcon },
 ]
 
-export default function FormattingToolbar({ onFormat, onHeading, formatState = {}, disabled, onUndo, onRedo, onToggleGuide, guideOpen }) {
+export default function FormattingToolbar({
+  onFormat,
+  onHeading,
+  formatState = {},
+  disabled,
+  onUndo,
+  onRedo,
+  onToggleGuide,
+  guideOpen,
+  onRequestLink,
+  linkEditor,
+  onAdvancedAction,
+}) {
   const headingValue = formatState.headingLevel ? String(formatState.headingLevel) : '0'
   return (
     <nav className={`formatting-toolbar${disabled ? ' is-disabled' : ''}`} aria-label="Herramientas de formato">
@@ -42,6 +56,27 @@ export default function FormattingToolbar({ onFormat, onHeading, formatState = {
       <div className="formatting-tools">
         {tools.map(({ id, label, shortcut, icon: ToolIcon }) => {
           const active = Boolean(formatState[id])
+          if (id === 'link') {
+            return (
+              <div className="link-tool-wrapper" key={id}>
+                <button
+                  className={`format-button${active ? ' is-active' : ''}`}
+                  type="button"
+                  aria-label="Enlace ⌘K"
+                  aria-pressed={active}
+                  title="Enlace (⌘K)"
+                  disabled={disabled}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={onRequestLink}
+                >
+                  <LinkIcon />
+                  <span>Enlace</span>
+                  <kbd>⌘K</kbd>
+                </button>
+                <LinkPopover {...linkEditor} />
+              </div>
+            )
+          }
           return (
             <button
               key={id}
@@ -61,6 +96,7 @@ export default function FormattingToolbar({ onFormat, onHeading, formatState = {
           )
         })}
       </div>
+      <AdvancedMenu disabled={disabled} onAction={onAdvancedAction} />
       <button
         className={`guide-button${guideOpen ? ' is-active' : ''}`}
         type="button"

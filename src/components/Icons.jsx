@@ -44,3 +44,11 @@ export const WarningIcon = () => <Icon><path d="M12 4 3.5 19h17z" /><path d="M12
 export const TrashIcon = () => <Icon><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></Icon>
 export const FocusIcon = () => <Icon><path d="M8 3H4v4M16 3h4v4M8 21H4v-4M16 21h4v-4" /></Icon>
 export const OutlineIcon = () => <Icon><path d="M9 6h11M9 12h11M9 18h11" /><circle cx="4" cy="6" r="1" /><circle cx="4" cy="12" r="1" /><circle cx="4" cy="18" r="1" /></Icon>
+export const LiveIcon = () => <Icon><path d="M4 7.5h16M4 12h10M4 16.5h7" /><path d="m17 14 3 3-3 3" /></Icon>
+export const TableIcon = () => <Icon><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M3 14h18M9 4v16M15 4v16" /></Icon>
+export const TaskIcon = () => <Icon><rect x="3" y="4" width="6" height="6" rx="1" /><path d="m4.5 7 1.5 1.5L8 6M12 7h9M4 15h5M12 15h9M4 19h5M12 19h9" /></Icon>
+export const ImageIcon = () => <Icon><rect x="3" y="4" width="18" height="16" rx="2" /><circle cx="8" cy="9" r="1.5" /><path d="m4 18 5-5 3 3 2-2 6 6" /></Icon>
+export const FootnoteIcon = () => <Icon><path d="M5 5h8M9 5v12M5 17h8M16 8h4M18 6v4M16 14h4M16 18h4" /></Icon>
+export const StrikeIcon = () => <Icon><path d="M7 7.5c.7-1.4 2.2-2.2 4.3-2.2 2.4 0 4 .9 4.7 2.7M8 16.5c.9 1.4 2.3 2.2 4.2 2.2 2.5 0 4.3-1.2 4.3-3.2 0-1.8-1.2-2.7-4.5-3.5M4 12h16" /></Icon>
+export const RuleIcon = () => <Icon><path d="M4 12h16" /></Icon>
+export const DiagramIcon = () => <Icon><rect x="3" y="4" width="6" height="5" rx="1" /><rect x="15" y="15" width="6" height="5" rx="1" /><path d="M9 6.5h4a4 4 0 0 1 4 4V15M15 17.5h-4a4 4 0 0 1-4-4V9" /></Icon>
