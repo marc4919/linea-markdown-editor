@@ -16,7 +16,6 @@ async function requireFile(path, description) {
 // Add the two files required by Sites after Vite has produced the static app.
 export function sites() {
   let root = process.cwd()
-  let outDir = 'dist'
 
   return {
     name: 'sites',
@@ -24,16 +23,22 @@ export function sites() {
     enforce: 'post',
     configResolved(config) {
       root = config.root
-      outDir = config.build.outDir
+    },
+    async buildStart() {
+      // Sites serves static files from dist/client. Clear the complete deploy
+      // output so assets from an older layout cannot leak into the archive.
+      await rm(resolve(root, 'dist'), { recursive: true, force: true })
     },
     async closeBundle() {
-      const outputRoot = resolve(root, outDir)
+      const outputRoot = resolve(root, 'dist')
+      const clientOutput = resolve(outputRoot, 'client')
       const hostingSource = resolve(root, '.openai', 'hosting.json')
       const workerSource = resolve(root, 'worker', 'index.js')
       const metadataOutput = resolve(outputRoot, '.openai')
       const serverOutput = resolve(outputRoot, 'server')
 
       await Promise.all([
+        requireFile(resolve(clientOutput, 'index.html'), 'Sites client entry point'),
         requireFile(hostingSource, 'Sites hosting metadata'),
         requireFile(workerSource, 'Sites worker entry point'),
       ])
