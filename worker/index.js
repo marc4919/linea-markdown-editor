@@ -33,7 +33,7 @@ function withAbsoluteSocialImageUrls(response, request) {
     return response
   }
 
-  const absoluteImageUrl = new URL('/og.png', request.url).href
+  const absoluteImageUrl = new URL('/og.jpg', request.url).href
   const imageHandler = {
     element(element) {
       element.setAttribute('content', absoluteImageUrl)
@@ -42,8 +42,8 @@ function withAbsoluteSocialImageUrls(response, request) {
 
   // Cloudflare's streaming rewriter keeps the asset response status and headers.
   return new HTMLRewriter()
-    .on('meta[property="og:image"][content="/og.png"]', imageHandler)
-    .on('meta[name="twitter:image"][content="/og.png"]', imageHandler)
+    .on('meta[property="og:image"][content="/og.jpg"]', imageHandler)
+    .on('meta[name="twitter:image"][content="/og.jpg"]', imageHandler)
     .transform(response)
 }
 
