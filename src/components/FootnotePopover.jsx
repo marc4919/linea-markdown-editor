@@ -60,7 +60,7 @@ export default function FootnotePopover({
       <div className="link-popover-heading">
         <FootnoteIcon />
         <strong id={titleId}>Añadir nota al pie</strong>
-        <button type="button" aria-label="Cerrar" onClick={closeAndRestore}><CloseIcon /></button>
+        <button className="popover-close-button" type="button" aria-label="Cerrar" onClick={closeAndRestore}><CloseIcon /></button>
       </div>
       <p className="sr-only" id={descriptionId}>Escribe el contenido antes de insertar la referencia y su nota.</p>
       <label>

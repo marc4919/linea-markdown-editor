@@ -51,7 +51,7 @@ export default function LinkPopover({ open, kind = 'link', initialLabel = '', in
       <div className="link-popover-heading">
         <LinkIcon />
         <strong id={titleId}>{isImage ? 'Insertar imagen' : canRemove ? 'Editar enlace' : 'Añadir enlace'}</strong>
-        <button type="button" aria-label="Cerrar" onClick={onClose}><CloseIcon /></button>
+        <button className="popover-close-button" type="button" aria-label="Cerrar" onClick={onClose}><CloseIcon /></button>
       </div>
       <label>
         <span>{isImage ? 'Descripción' : 'Texto'}</span>

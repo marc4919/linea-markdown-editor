@@ -550,22 +550,26 @@ export default function MermaidBuilderDialog({
             <h2 id={titleId}>{editing ? 'Editar diagrama' : 'Crear diagrama'}</h2>
             <p id={descriptionId}>Elige una plantilla y completa sus datos. Línea genera Mermaid por ti.</p>
           </div>
-          <button type="button" aria-label="Cerrar el creador de diagramas" onClick={onCancel}><CloseIcon /></button>
+          <div className="builder-dialog-header-actions">
+            <div className="mermaid-edit-mode" role="group" aria-label="Forma de crear el diagrama">
+              <button type="button" className={editingMode === 'assistant' ? 'is-active' : ''} aria-pressed={editingMode === 'assistant'} onClick={() => setEditingMode('assistant')}>Asistente</button>
+              <button
+                type="button"
+                className={editingMode === 'code' ? 'is-active' : ''}
+                aria-pressed={editingMode === 'code'}
+                onClick={() => {
+                  if (!rawSource.trim() && generated.source) onSourceChange?.(generated.source)
+                  setEditingMode('code')
+                }}
+              >Código Mermaid</button>
+            </div>
+            <button className="popover-close-button" type="button" aria-label="Cerrar el creador de diagramas" onClick={onCancel}><CloseIcon /></button>
+          </div>
         </header>
 
         <div className="mermaid-dialog-scroll">
-          <div className="mermaid-edit-mode" role="group" aria-label="Forma de crear el diagrama">
-          <button type="button" className={editingMode === 'assistant' ? 'is-active' : ''} aria-pressed={editingMode === 'assistant'} onClick={() => setEditingMode('assistant')}>Asistente</button>
-          <button
-            type="button"
-            className={editingMode === 'code' ? 'is-active' : ''}
-            aria-pressed={editingMode === 'code'}
-            onClick={() => {
-              if (!rawSource.trim() && generated.source) onSourceChange?.(generated.source)
-              setEditingMode('code')
-            }}
-          >Código Mermaid</button>
-          <button className="mermaid-reset-example" type="button" onClick={resetExample}>Restablecer ejemplo</button>
+          <div className="mermaid-dialog-tools">
+            <button className="mermaid-reset-example" type="button" onClick={resetExample}>Restablecer ejemplo</button>
           </div>
 
           {editingMode === 'assistant' ? <fieldset className="mermaid-template-picker">

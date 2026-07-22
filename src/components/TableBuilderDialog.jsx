@@ -89,7 +89,7 @@ export default function TableBuilderDialog({ spec = {}, onChange, onConfirm, onC
             <h2 id={titleId}>Insertar tabla</h2>
             <p id={descriptionId}>Elige el tamaño y escribe los nombres de la cabecera.</p>
           </div>
-          <button type="button" aria-label="Cerrar el creador de tablas" onClick={onCancel}><CloseIcon /></button>
+          <button className="popover-close-button" type="button" aria-label="Cerrar el creador de tablas" onClick={onCancel}><CloseIcon /></button>
         </header>
 
         <div className="table-builder-content">

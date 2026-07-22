@@ -10,6 +10,7 @@ import TableBuilderDialog from './components/TableBuilderDialog.jsx'
 import Toolbar from './components/Toolbar.jsx'
 import Workspace from './components/Workspace.jsx'
 import MermaidBuilderDialog from './components/MermaidBuilderDialog.jsx'
+import { CloseIcon } from './components/Icons.jsx'
 import { STARTER_MARKDOWN } from './data.js'
 import {
   getFormattingState,
@@ -1109,7 +1110,7 @@ export default function App() {
       <DropOverlay visible={dropActive} />
       {focusMode ? (
         <button className="focus-exit-button" type="button" aria-label="Volver a la interfaz" title="Volver a la interfaz" onClick={() => setFocusMode(null)}>
-          <span aria-hidden="true">×</span>
+          <CloseIcon />
           <span className="sr-only">Volver a la interfaz</span>
         </button>
       ) : null}

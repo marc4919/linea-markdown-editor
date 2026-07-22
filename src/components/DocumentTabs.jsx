@@ -27,9 +27,11 @@ export default function DocumentTabs({ documents, activeId, onActivate, onClose,
                   <EditIcon />
                 </button>
               ) : null}
-              <button className="tab-close" type="button" aria-label={`Cerrar ${document.filename}`} onClick={() => onClose(document.id)}>
-                <CloseIcon />
-              </button>
+              {documents.length > 1 ? (
+                <button className="tab-close" type="button" aria-label={`Cerrar ${document.filename}`} onClick={() => onClose(document.id)}>
+                  <CloseIcon />
+                </button>
+              ) : null}
             </div>
           )
         })}
